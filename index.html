@@ -132,10 +132,15 @@
                 <label>步长:</label>
                 <input type="number" id="stepSize" value="3" min="1">
             </div>
+            <div class="form-group">
+                <label>新增加点数:</label>
+                <input type="number" id="additionalPoints" value="5" min="1">
+            </div>
 
             <button type="button" onclick="simulateBattle()">模拟单次战斗</button>
             <button type="button" onclick="batchSimulate()">批量模拟当前加点</button>
             <button type="button" onclick="findBestBuild()">寻找最优加点</button>
+            <button type="button" onclick="findBestAdditionalPoints()">寻找最优新增加点</button>
 
             <div id="progressContainer"> 
                 <progress id="progressBar" value="0" max="100"></progress>
@@ -166,6 +171,7 @@
                 simCount: document.getElementById('simCount'),
                 modifyRange: document.getElementById('modifyRange'),
                 stepSize: document.getElementById('stepSize'),
+                additionalPoints: document.getElementById('additionalPoints'),
                 totalPointsValue: document.getElementById('totalPointsValue'),
                 totalPointsWarning: document.getElementById('totalPointsWarning'),
                 cloneHP: document.getElementById('cloneHP'),
@@ -241,7 +247,7 @@
             const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
             const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
             const cloneStats = {
-                cloneHP: ((baseCloneHP + 7 * B) * 1.1).toFixed(1),
+                cloneHP: ((baseCloneHP + 7 * B) ).toFixed(1),
                 cloneAttack: (baseCloneAttack + 7 * A) * cloneCount,
                 clonePrecision: C,
                 cloneDodge: D
@@ -278,7 +284,8 @@
                 addArmor: document.getElementById('addArmor'),
                 simCount: document.getElementById('simCount'),
                 modifyRange: document.getElementById('modifyRange'),
-                stepSize: document.getElementById('stepSize')
+                stepSize: document.getElementById('stepSize'),
+                additionalPoints: document.getElementById('additionalPoints')
             };
 
             for (const key in elements) {
@@ -568,7 +575,7 @@
                 enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                 cloneCount: parseInt(document.getElementById('cloneCount').value),
                 cloneHP: parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B,
-                cloneAttack: parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A * parseInt(document.getElementById('cloneCount').value), // 修正错误
+                cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value),
                 clonePrecision: build.C,
                 cloneDodge: build.D,
                 critChance: parseFloat(document.getElementById('critChance').value) / 100,
@@ -643,6 +650,108 @@
                 document.getElementById('addArmor').value = parseInt(document.getElementById('addArmor').value) + 1;
             }
             // 更新克隆人统计数据
+            updateCloneStats();
+        }
+
+        async function findBestAdditionalPoints() {
+            const currentPoints = getCurrentTotalPoints();
+            const additionalPoints = parseInt(document.getElementById('additionalPoints').value) || 10;
+            const newTotalPoints = currentPoints + additionalPoints;
+            const simCount = 36000;
+            const range = parseInt(document.getElementById('modifyRange').value) || 8;
+            const stepSize = parseInt(document.getElementById('stepSize').value) || 1;
+
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressBar').value = 0;
+            document.getElementById('progressText').textContent = '0%';
+            document.getElementById('result').textContent = `正在寻找最佳新增${additionalPoints}点的加点组合...`;
+
+            // 保存当前加点
+            const currentBuild = {
+                A: parseInt(document.getElementById('addAttack').value) || 0,
+                B: parseInt(document.getElementById('addArmor').value) || 0,
+                C: parseInt(document.getElementById('addPrecision').value) || 0,
+                D: parseInt(document.getElementById('addDodge').value) || 0
+            };
+
+            // 生成可能的变化组合
+            const variations = [];
+            for (let dA = 0; dA <= additionalPoints; dA++) {
+                for (let dB = 0; dB <= additionalPoints - dA; dB++) {
+                    for (let dC = 0; dC <= additionalPoints - dA - dB; dC++) {
+                        const dD = additionalPoints - dA - dB - dC;
+                        variations.push({ dA, dB, dC, dD });
+                    }
+                }
+            }
+
+            document.getElementById('progressBar').max = variations.length;
+            
+            let topBuilds = [];
+            for (let i = 0; i < variations.length; i++) {
+                const { dA, dB, dC, dD } = variations[i];
+                const newBuild = {
+                    A: currentBuild.A + dA,
+                    B: currentBuild.B + dB,
+                    C: currentBuild.C + dC,
+                    D: currentBuild.D + dD
+                };
+
+                const params = {
+                    enemyHP: parseFloat(document.getElementById('enemyHP').textContent),
+                    enemyAttack: parseFloat(document.getElementById('enemyAttack').textContent),
+                    enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
+                    enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
+                    cloneCount: parseInt(document.getElementById('cloneCount').value),
+                    cloneHP: parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B,
+                    cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value),
+                    clonePrecision: newBuild.C,
+                    cloneDodge: newBuild.D,
+                    critChance: parseFloat(document.getElementById('critChance').value) / 100,
+                    critDamage: parseFloat(document.getElementById('critDamage').value) / 100,
+                    reAttackChance: parseFloat(document.getElementById('reAttackChance').value) / 100
+                };
+
+                const winRate = await new Promise((resolve) => {
+                    worker.onmessage = function(e) {
+                        resolve((e.data.winCount / simCount) * 100);
+                    };
+                    worker.postMessage({ params, simCount });
+                });
+
+                topBuilds.push({
+                    ...newBuild,
+                    dA, dB, dC, dD,
+                    winRate
+                });
+
+                topBuilds.sort((a, b) => b.winRate - a.winRate);
+                topBuilds = topBuilds.slice(0, 6); // 保留最佳的6个方案
+
+                const progress = ((i + 1) / variations.length * 100).toFixed(2);
+                requestAnimationFrame(() => {
+                    document.getElementById('progressBar').value = i + 1;
+                    document.getElementById('progressText').textContent = `${progress}%`;
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            // 显示结果
+            let resultHTML = `<h2>新增${additionalPoints}点的最佳加点方案</h2>`;
+            resultHTML += '<table border="1"><tr><th>排名</th><th>能量</th><th>精准</th><th>闪避</th><th>装甲</th><th>新增能量</th><th>新增精准</th><th>新增闪避</th><th>新增装甲</th><th>胜率</th></tr>';
+            topBuilds.forEach((build, index) => {
+                resultHTML += `<tr><td>${index + 1}</td><td>${build.A}</td><td>${build.C}</td><td>${build.D}</td><td>${build.B}</td><td>${build.dA}</td><td>${build.dC}</td><td>${build.dD}</td><td>${build.dB}</td><td>${build.winRate.toFixed(2)}%</td></tr>`;
+            });
+            resultHTML += '</table>';
+            document.getElementById('result').innerHTML = resultHTML;
+
+            // 应用最佳加点方案
+            const bestBuild = topBuilds[0];
+            document.getElementById('addAttack').value = bestBuild.A;
+            document.getElementById('addPrecision').value = bestBuild.C;
+            document.getElementById('addDodge').value = bestBuild.D;
+            document.getElementById('addArmor').value = bestBuild.B;
             updateCloneStats();
         }
     </script>
