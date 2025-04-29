@@ -88,6 +88,11 @@
                 <label>闪避:</label>
                 <span id="cloneDodge">2</span>
             </div>
+            <div class="form-group">
+                <label>会员状态:</label>
+                <input type="checkbox" id="vipStatus" onchange="updateCloneStats()">
+                <span>(生命值提升1.1倍)</span>
+            </div>
         </div>
 
         <div style="flex: 1;">
@@ -246,8 +251,9 @@
             // 计算克隆人参数
             const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
             const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
+            const isVip = document.getElementById('vipStatus').checked;
             const cloneStats = {
-                cloneHP: ((baseCloneHP + 7 * B) ).toFixed(1),
+                cloneHP: ((baseCloneHP + 7 * B) * (isVip ? 1.1 : 1)).toFixed(1),
                 cloneAttack: (baseCloneAttack + 7 * A) * cloneCount,
                 clonePrecision: C,
                 cloneDodge: D
@@ -574,7 +580,7 @@
                 enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                 enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                 cloneCount: parseInt(document.getElementById('cloneCount').value),
-                cloneHP: parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B,
+                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B) * (document.getElementById('vipStatus').checked ? 1.1 : 1),
                 cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value),
                 clonePrecision: build.C,
                 cloneDodge: build.D,
@@ -703,7 +709,7 @@
                     enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                     enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                     cloneCount: parseInt(document.getElementById('cloneCount').value),
-                    cloneHP: parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B,
+                    cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B) * (document.getElementById('vipStatus').checked ? 1.1 : 1),
                     cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value),
                     clonePrecision: newBuild.C,
                     cloneDodge: newBuild.D,
