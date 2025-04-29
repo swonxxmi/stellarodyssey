@@ -142,6 +142,24 @@
                 <input type="number" id="additionalPoints" value="5" min="1">
             </div>
 
+            <h2>收益比较分析</h2>
+            <div class="form-group">
+                <label>新增克隆人成本:</label>
+                <input type="number" id="clonePrice" value="100000000">
+            </div>
+            <button type="button" onclick="compareUpgrades()">比较升级收益</button>
+            
+            <div class="form-group" style="margin-top: 10px;">
+                <label>查看属性升级曲线:</label>
+                <select id="attributeSelect">
+                    <option value="critChance">暴击几率</option>
+                    <option value="critDamage">暴击伤害</option>
+                    <option value="reAttackChance">双重射击</option>
+                </select>
+                <button type="button" onclick="showUpgradeCurve()">显示升级曲线</button>
+                <label><input type="checkbox" id="debugMode"> 开启调试模式</label>
+            </div>
+
             <button type="button" onclick="simulateBattle()">模拟单次战斗</button>
             <button type="button" onclick="batchSimulate()">批量模拟当前加点</button>
             <button type="button" onclick="findBestBuild()">寻找最优加点</button>
@@ -759,6 +777,298 @@
             document.getElementById('addDodge').value = bestBuild.D;
             document.getElementById('addArmor').value = bestBuild.B;
             updateCloneStats();
+        }
+
+        function calculateExponentialValue(input) {
+            const BASE_FACTOR = 5000;
+            const GROWTH_RATE = 0.15;
+            return BASE_FACTOR * input * Math.exp(GROWTH_RATE * input);
+        }
+
+        function sumExponentialRange(start, end) {
+            const STEP_SIZE = 0.1;
+            let totalSum = 0;
+            
+            let debugValues = []; // 保持调试功能
+            
+            for (
+                let current = Number((start + STEP_SIZE).toFixed(1)); // 从 start + 0.1 开始
+                current <= end;                                       // 直到达到 end
+                current = Number((current + STEP_SIZE).toFixed(1))    // 每次增加 0.1
+            ) {
+                const value = calculateExponentialValue(current);
+                totalSum += value;
+                if (window.debugMode) { // 保持调试输出
+                   debugValues.push({current, value});
+                }
+            }
+            
+            if (window.debugMode) {
+                console.log("计算区间: ", start, "到", end);
+                console.log("计算步骤: ", debugValues);
+                console.log("总成本: ", totalSum);
+            }
+            
+            return totalSum;
+        }
+
+        // 计算单次升级(+1%)的成本和新值
+        function getSingleUpgrade(currentValue, cloneCount) {
+            const nextValue = Number((currentValue + 1.0).toFixed(1));
+            const cost = sumExponentialRange(currentValue, nextValue) * cloneCount;
+            return { maxValue: nextValue, cost: cost };
+        }
+
+        // 添加一个函数来显示一个属性的升级曲线
+        async function showUpgradeCurve() {
+            const attribute = document.getElementById('attributeSelect').value;
+            const currentValue = parseFloat(document.getElementById(attribute).value) || 0;
+            const cloneCount = parseInt(document.getElementById('cloneCount').value) || 1;
+            
+            let curveData = [];
+            
+            // 是否启用调试模式(控制台输出详细计算步骤)
+            window.debugMode = document.getElementById('debugMode').checked;
+            
+            // 对于暴击伤害，减去基础值130%
+            let actualValue = currentValue;
+            if (attribute === 'critDamage') {
+                actualValue = currentValue - 130; // 减去基础值
+            }
+            
+            // 计算不同升级范围的成本
+            // 增加0.1%的成本
+            const cost01 = sumExponentialRange(actualValue, actualValue + 0.1) * cloneCount;
+            // 增加1.0%的成本
+            const cost10 = sumExponentialRange(actualValue, actualValue + 1.0) * cloneCount;
+            
+            // 游戏常见区间的成本计算验证
+            let specialCases = [
+            
+            ];
+            
+            let verificationHTML = '';
+            
+            for (let testCase of specialCases) {
+                const calculatedCost = sumExponentialRange(testCase.from, testCase.to) * cloneCount;
+                verificationHTML += `<tr><td>${testCase.from}%→${testCase.to}%</td><td>${calculatedCost.toFixed(0)}</td><td>${testCase.expectedCost}</td></tr>`;
+            }
+            
+            verificationHTML += '</table>';
+            
+            // 计算从当前值开始，每+1%的成本，以及累计成本
+            let totalCumulativeCost = 0;
+            for (let i = 0; i < 10; i++) {
+                const startValue = actualValue + i;
+                const endValue = startValue + 1.0;
+                const stepCost = sumExponentialRange(startValue, endValue) * cloneCount;
+                totalCumulativeCost += stepCost;
+                
+                // 显示的值需要加回基础值（如果是暴击伤害）
+                let displayFrom = startValue;
+                let displayTo = endValue;
+                if (attribute === 'critDamage') {
+                    displayFrom += 130;
+                    displayTo += 130;
+                }
+                
+                curveData.push({
+                    from: displayFrom.toFixed(1) + '%',
+                    to: displayTo.toFixed(1) + '%',
+                    cost: stepCost.toFixed(0),
+                    cumulative: totalCumulativeCost.toFixed(0)
+                });
+            }
+            
+            // 显示结果
+            let resultHTML = `<h3>${attribute === 'critChance' ? '暴击几率' : attribute === 'critDamage' ? '暴击伤害' : '双重射击'}升级成本曲线</h3>`;
+            
+            resultHTML += `<p>当前值: ${currentValue}%</p>`;
+            if (attribute === 'critDamage') {
+                resultHTML += `<p>实际计算值(减去130%基础值): ${actualValue.toFixed(1)}%</p>`;
+            }
+            resultHTML += `<p>增加0.1%成本: ${cost01.toFixed(0)}</p>`;
+            resultHTML += `<p>增加1.0%成本: ${cost10.toFixed(0)}</p>`;
+            
+            resultHTML += '<table border="1"><tr><th>从</th><th>到</th><th>成本 (货币)</th><th>累计成本</th></tr>';
+            
+            curveData.forEach(data => {
+                resultHTML += `<tr><td>${data.from}</td><td>${data.to}</td><td>${data.cost}</td><td>${data.cumulative}</td></tr>`;
+            });
+            
+            resultHTML += '</table>';
+            resultHTML += '<p>注意：成本已乘以当前克隆人数量 ' + cloneCount + '</p>';
+            resultHTML += verificationHTML;
+            
+            document.getElementById('result').innerHTML = resultHTML;
+        }
+
+        async function compareUpgrades() {
+            const cloneCount = parseInt(document.getElementById('cloneCount').value) || 1;
+            const clonePrice = parseFloat(document.getElementById('clonePrice').value) || 100000000;
+            const simCount = 360000
+            
+            // 开启调试模式查看计算过程
+            window.debugMode = document.getElementById('debugMode').checked;
+            
+            document.getElementById('result').innerHTML = '正在计算各项升级收益比较，请稍候...';
+            
+            // 获取当前值 - 直接从页面输入框获取而不是current开头的输入框
+            const currentCritChance = parseFloat(document.getElementById('critChance').value) || 0;
+            const currentCritDamage = parseFloat(document.getElementById('critDamage').value) || 130;
+            const currentReAttackChance = parseFloat(document.getElementById('reAttackChance').value) || 0;
+            
+            console.log("--- compareUpgrades Debug --- ");
+            console.log("读取到的克隆人数量:", cloneCount);
+            console.log("读取到的暴击几率:", currentCritChance);
+            console.log("读取到的暴击伤害:", currentCritDamage);
+            console.log("读取到的双重射击:", currentReAttackChance);
+            
+            // 先保存当前输入框的值
+            const critChanceOriginal = document.getElementById('critChance').value;
+            const critDamageOriginal = document.getElementById('critDamage').value;
+            const reAttackChanceOriginal = document.getElementById('reAttackChance').value;
+            
+            // 计算各项单次升级(+1%)的值和成本
+            const critChanceUpgrade = getSingleUpgrade(currentCritChance, cloneCount);
+            // 暴击伤害需要减去基础值130%再计算成本
+            const critDamageBase = 130;
+            const critDamageActual = currentCritDamage - critDamageBase; // 减去基础值
+            const critDamageNextValue = Number((critDamageActual + 1.0).toFixed(1));
+            const critDamageCost = sumExponentialRange(critDamageActual, critDamageNextValue) * cloneCount;
+            const critDamageUpgrade = { 
+                maxValue: critDamageNextValue + critDamageBase, // 返回时加回基础值
+                cost: critDamageCost 
+            };
+            const reAttackChanceUpgrade = getSingleUpgrade(currentReAttackChance, cloneCount);
+            
+            console.log("计算出的暴击几率升级成本 (已乘克隆数):", critChanceUpgrade.cost);
+            console.log("计算出的暴击伤害升级成本 (已乘克隆数):", critDamageUpgrade.cost);
+            console.log("计算出的双重射击升级成本 (已乘克隆数):", reAttackChanceUpgrade.cost);
+            
+            // 计算新增克隆人
+            const newCloneCount = cloneCount + 1;
+            const cloneCost = clonePrice;
+            
+            // 如果升级值和当前值相同则跳过模拟
+            let critChanceResult = { currentWinRate: 0, newWinRate: 0 };
+            let critDamageResult = { currentWinRate: 0, newWinRate: 0 };
+            let reAttackChanceResult = { currentWinRate: 0, newWinRate: 0 };
+            
+            // 获取基础胜率
+            document.getElementById('critChance').value = currentCritChance;
+            document.getElementById('critDamage').value = currentCritDamage;
+            document.getElementById('reAttackChance').value = currentReAttackChance;
+            const baseParams = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+            const baseWinRate = await new Promise((resolve) => {
+                worker.onmessage = function(e) {
+                    resolve((e.data.winCount / simCount) * 100);
+                };
+                worker.postMessage({ params: baseParams, simCount });
+            });
+            
+            // 模拟单次升级后结果
+            // 暴击几率
+            document.getElementById('critChance').value = critChanceUpgrade.maxValue;
+            const critChanceParams = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+            const critChanceWinRate = await new Promise((resolve) => {
+                worker.onmessage = function(e) {
+                    resolve((e.data.winCount / simCount) * 100);
+                };
+                worker.postMessage({ params: critChanceParams, simCount });
+            });
+            critChanceResult = { currentWinRate: baseWinRate, newWinRate: critChanceWinRate };
+            document.getElementById('critChance').value = currentCritChance;
+            
+            // 暴击伤害
+            document.getElementById('critDamage').value = critDamageUpgrade.maxValue;
+            const critDamageParams = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+            const critDamageWinRate = await new Promise((resolve) => {
+                worker.onmessage = function(e) {
+                    resolve((e.data.winCount / simCount) * 100);
+                };
+                worker.postMessage({ params: critDamageParams, simCount });
+            });
+            critDamageResult = { currentWinRate: baseWinRate, newWinRate: critDamageWinRate };
+            document.getElementById('critDamage').value = currentCritDamage;
+            
+            // 双重射击
+            document.getElementById('reAttackChance').value = reAttackChanceUpgrade.maxValue;
+            const reAttackParams = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+            const reAttackWinRate = await new Promise((resolve) => {
+                worker.onmessage = function(e) {
+                    resolve((e.data.winCount / simCount) * 100);
+                };
+                worker.postMessage({ params: reAttackParams, simCount });
+            });
+            reAttackChanceResult = { currentWinRate: baseWinRate, newWinRate: reAttackWinRate };
+            document.getElementById('reAttackChance').value = currentReAttackChance;
+            
+            // 评估新增克隆人的胜率变化
+            let newCloneWinRate = baseWinRate;
+            const originalCloneCount = document.getElementById('cloneCount').value;
+            document.getElementById('cloneCount').value = newCloneCount;
+            updateCloneStats();
+            const newCloneParams = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+            newCloneWinRate = await new Promise((resolve) => {
+                worker.onmessage = function(e) {
+                    resolve((e.data.winCount / simCount) * 100);
+                };
+                worker.postMessage({ params: newCloneParams, simCount });
+            });
+            document.getElementById('cloneCount').value = originalCloneCount;
+            updateCloneStats();
+            
+            // 计算投资回报率 (胜率提升/成本)
+            const critChanceROI = critChanceUpgrade.cost > 0 ? 
+                (critChanceResult.newWinRate - critChanceResult.currentWinRate) / critChanceUpgrade.cost * 1000000 : 0;
+            
+            const critDamageROI = critDamageUpgrade.cost > 0 ? 
+                (critDamageResult.newWinRate - critDamageResult.currentWinRate) / critDamageUpgrade.cost * 1000000 : 0;
+            
+            const reAttackChanceROI = reAttackChanceUpgrade.cost > 0 ? 
+                (reAttackChanceResult.newWinRate - reAttackChanceResult.currentWinRate) / reAttackChanceUpgrade.cost * 1000000 : 0;
+            
+            const newCloneROI = cloneCost > 0 ? 
+                (newCloneWinRate - baseWinRate) / cloneCost * 1000000 : 0;
+            
+            // 恢复所有原始值
+            document.getElementById('critChance').value = critChanceOriginal;
+            document.getElementById('critDamage').value = critDamageOriginal;
+            document.getElementById('reAttackChance').value = reAttackChanceOriginal;
+            
+            // 显示结果
+            let resultHTML = '<h2>升级收益比较结果</h2>';
+            resultHTML += '<table border="1"><tr><th>升级选项</th><th>当前值</th><th>升级后</th><th>成本 (货币)</th><th>胜率变化</th><th>投资回报率 (百万)</th></tr>';
+            
+            resultHTML += `<tr><td>暴击几率</td><td>${currentCritChance.toFixed(1)}%</td><td>${critChanceUpgrade.maxValue.toFixed(1)}%</td><td>${critChanceUpgrade.cost.toFixed(0)}</td>
+                           <td>${(critChanceResult.newWinRate - critChanceResult.currentWinRate).toFixed(2)}%</td><td>${critChanceROI.toFixed(4)}</td></tr>`;
+            
+            resultHTML += `<tr><td>暴击伤害</td><td>${currentCritDamage.toFixed(1)}%</td><td>${critDamageUpgrade.maxValue.toFixed(1)}%</td><td>${critDamageUpgrade.cost.toFixed(0)}</td>
+                           <td>${(critDamageResult.newWinRate - critDamageResult.currentWinRate).toFixed(2)}%</td><td>${critDamageROI.toFixed(4)}</td></tr>`;
+            
+            resultHTML += `<tr><td>双重射击</td><td>${currentReAttackChance.toFixed(1)}%</td><td>${reAttackChanceUpgrade.maxValue.toFixed(1)}%</td><td>${reAttackChanceUpgrade.cost.toFixed(0)}</td>
+                           <td>${(reAttackChanceResult.newWinRate - reAttackChanceResult.currentWinRate).toFixed(2)}%</td><td>${reAttackChanceROI.toFixed(4)}</td></tr>`;
+            
+            resultHTML += `<tr><td>新增克隆人</td><td>${cloneCount}</td><td>${newCloneCount}</td><td>${cloneCost.toFixed(0)}</td>
+                           <td>${(newCloneWinRate - baseWinRate).toFixed(2)}%</td><td>${newCloneROI.toFixed(4)}</td></tr>`;
+            
+            resultHTML += '</table>';
+            resultHTML += '<p>注意：成本已乘以当前克隆人数量 ' + cloneCount + '</p>';
+            
+            // 找出最佳投资选项
+            const options = [
+                { name: '暴击几率', roi: critChanceROI },
+                { name: '暴击伤害', roi: critDamageROI },
+                { name: '双重射击', roi: reAttackChanceROI },
+                { name: '新增克隆人', roi: newCloneROI }
+            ];
+            
+            // 按ROI排序
+            options.sort((a, b) => b.roi - a.roi);
+            resultHTML += `<h3>最佳投资选项</h3><p>根据当前分析，<strong>${options[0].name}</strong>的投资回报率最高，建议优先升级此项。</p>`;
+            
+            document.getElementById('result').innerHTML = resultHTML;
         }
     </script>
 </body>
