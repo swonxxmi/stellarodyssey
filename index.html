@@ -94,6 +94,11 @@
                 <input type="checkbox" id="vipStatus" onchange="updateCloneStats()">
                 <span>(生命值提升1.1倍)</span>
             </div>
+            <div class="form-group">
+                <label>静默搜索:</label>
+                <input type="checkbox" id="silentSearch" checked>
+                <span>(不实时更新属性)</span>
+            </div>
         </div>
 
         <div style="flex: 1;">
@@ -215,12 +220,13 @@
                 result: document.getElementById('result'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
                 dontApplyBuild: document.getElementById('dontApplyBuild'),
-                vipStatus: document.getElementById('vipStatus')
+                vipStatus: document.getElementById('vipStatus'),
+                silentSearch: document.getElementById('silentSearch')
             };
 
             // 恢复输入值
             for (const key in elements) {
-                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus') {
+                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus' && key !== 'silentSearch') {
                     elements[key].value = localStorage.getItem(key) || elements[key].value;
                 }
             }
@@ -234,6 +240,9 @@
 
             const vipStatus = localStorage.getItem('vipStatus');
             elements.vipStatus.checked = vipStatus !== null ? vipStatus === 'true' : false;
+            
+            const silentSearch = localStorage.getItem('silentSearch');
+            elements.silentSearch.checked = silentSearch !== null ? silentSearch === 'true' : true;
             
             // 获取实际总点数
             const currentTotalPoints = getCurrentTotalPoints();
@@ -339,12 +348,13 @@
                 additionalPoints: document.getElementById('additionalPoints'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
                 dontApplyBuild: document.getElementById('dontApplyBuild'),
-                vipStatus: document.getElementById('vipStatus')
+                vipStatus: document.getElementById('vipStatus'),
+                silentSearch: document.getElementById('silentSearch')
             };
 
             for (const key in elements) {
                 if (elements[key]) {
-                    if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'vipStatus') {
+                    if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'vipStatus' || key === 'silentSearch') {
                         localStorage.setItem(key, elements[key].checked);
                     } else {
                         localStorage.setItem(key, elements[key].value);
@@ -700,38 +710,82 @@
         async function refineBuild(build, simCount) {
             const total = build.A + build.B + build.C + build.D;
             const currentTotal = getCurrentTotalPoints();
+            const silentSearch = document.getElementById('silentSearch').checked;
             
             if (total !== currentTotal) {
                 document.getElementById('result').textContent = `当前加点总和为 ${currentTotal}，与模拟起始值不同`;
                 return { A: 0, B: 0, C: 0, D: 0, cloneHP: 0, cloneAttack: 0, clonePrecision: 0, cloneDodge: 0, winRate: 0 };
             }
 
-            await new Promise(resolve => {
-                requestAnimationFrame(() => {
-                    document.getElementById('addAttack').value = build.A;
-                    document.getElementById('addPrecision').value = build.C;
-                    document.getElementById('addDodge').value = build.D;
-                    document.getElementById('addArmor').value = build.B;
-                    updateCloneStats();
-                    resolve();
-                });
-            });
-
-            const params = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
-            return new Promise((resolve) => {
-                worker.onmessage = function(e) {
-                    const winRate = (e.data.winCount / simCount) * 100;
-                    resolve({
-                        A: build.A, B: build.B, C: build.C, D: build.D,
-                        cloneHP: parseFloat(document.getElementById('cloneHP').textContent),
-                        cloneAttack: parseFloat(document.getElementById('cloneAttack').textContent),
-                        clonePrecision: parseFloat(document.getElementById('clonePrecision').textContent),
-                        cloneDodge: parseFloat(document.getElementById('cloneDodge').textContent),
-                        winRate
+            // 计算克隆人属性，不修改DOM
+            const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
+            const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
+            const isVip = document.getElementById('vipStatus').checked;
+            const cloneCount = parseInt(document.getElementById('cloneCount').value);
+            
+            const cloneHP = ((baseCloneHP + 7 * build.B) * (isVip ? 1.1 : 1)).toFixed(1);
+            const cloneAttack = (baseCloneAttack + 7 * build.A) * cloneCount;
+            
+            // 如果不是静默搜索，则更新DOM
+            if (!silentSearch) {
+                await new Promise(resolve => {
+                    requestAnimationFrame(() => {
+                        document.getElementById('addAttack').value = build.A;
+                        document.getElementById('addPrecision').value = build.C;
+                        document.getElementById('addDodge').value = build.D;
+                        document.getElementById('addArmor').value = build.B;
+                        updateCloneStats();
+                        resolve();
                     });
+                });
+                
+                const params = getParamsForLevel(parseInt(document.getElementById('enemyLevel').value));
+                return new Promise((resolve) => {
+                    worker.onmessage = function(e) {
+                        const winRate = (e.data.winCount / simCount) * 100;
+                        resolve({
+                            A: build.A, B: build.B, C: build.C, D: build.D,
+                            cloneHP: parseFloat(document.getElementById('cloneHP').textContent),
+                            cloneAttack: parseFloat(document.getElementById('cloneAttack').textContent),
+                            clonePrecision: parseFloat(document.getElementById('clonePrecision').textContent),
+                            cloneDodge: parseFloat(document.getElementById('cloneDodge').textContent),
+                            winRate
+                        });
+                    };
+                    worker.postMessage({ params, simCount });
+                });
+            } else {
+                // 静默搜索模式，不更新DOM，直接使用计算的属性
+                const params = {
+                    enemyHP: parseFloat(document.getElementById('enemyHP').textContent),
+                    enemyAttack: parseFloat(document.getElementById('enemyAttack').textContent),
+                    enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
+                    enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
+                    cloneCount: cloneCount,
+                    cloneHP: parseFloat(cloneHP),
+                    cloneAttack: cloneAttack,
+                    clonePrecision: build.C,
+                    cloneDodge: build.D,
+                    critChance: parseFloat(document.getElementById('critChance').value) / 100,
+                    critDamage: (parseFloat(document.getElementById('critDamage').value) + 130) / 100,
+                    reAttackChance: parseFloat(document.getElementById('reAttackChance').value) / 100
                 };
-                worker.postMessage({ params, simCount });
-            });
+                
+                return new Promise((resolve) => {
+                    worker.onmessage = function(e) {
+                        const winRate = (e.data.winCount / simCount) * 100;
+                        resolve({
+                            A: build.A, B: build.B, C: build.C, D: build.D,
+                            cloneHP: parseFloat(cloneHP),
+                            cloneAttack: cloneAttack,
+                            clonePrecision: build.C,
+                            cloneDodge: build.D,
+                            winRate
+                        });
+                    };
+                    worker.postMessage({ params, simCount });
+                });
+            }
         }
 
         function resetToAverage() {
