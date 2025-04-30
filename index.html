@@ -214,12 +214,13 @@
                 cloneDodge: document.getElementById('cloneDodge'),
                 result: document.getElementById('result'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
-                dontApplyBuild: document.getElementById('dontApplyBuild')
+                dontApplyBuild: document.getElementById('dontApplyBuild'),
+                vipStatus: document.getElementById('vipStatus')
             };
 
             // 恢复输入值
             for (const key in elements) {
-                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild') {
+                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus') {
                     elements[key].value = localStorage.getItem(key) || elements[key].value;
                 }
             }
@@ -230,6 +231,9 @@
             
             const dontApplyBuild = localStorage.getItem('dontApplyBuild');
             elements.dontApplyBuild.checked = dontApplyBuild !== null ? dontApplyBuild === 'true' : true;
+
+            const vipStatus = localStorage.getItem('vipStatus');
+            elements.vipStatus.checked = vipStatus !== null ? vipStatus === 'true' : false;
             
             // 获取实际总点数
             const currentTotalPoints = getCurrentTotalPoints();
@@ -334,12 +338,13 @@
                 stepSize: document.getElementById('stepSize'),
                 additionalPoints: document.getElementById('additionalPoints'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
-                dontApplyBuild: document.getElementById('dontApplyBuild')
+                dontApplyBuild: document.getElementById('dontApplyBuild'),
+                vipStatus: document.getElementById('vipStatus')
             };
 
             for (const key in elements) {
                 if (elements[key]) {
-                    if (key === 'hideAnalysis' || key === 'dontApplyBuild') {
+                    if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'vipStatus') {
                         localStorage.setItem(key, elements[key].checked);
                     } else {
                         localStorage.setItem(key, elements[key].value);
