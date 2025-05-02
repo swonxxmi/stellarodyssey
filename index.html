@@ -107,6 +107,7 @@
             </div>
             <button type="button" onclick="resetToAverage()">平均分配</button>
             <button type="button" onclick="openJsonImportModal()">导入JSON数据</button>
+            <button type="button" onclick="importFromCalculator()">一键导入游戏数据</button>
 
             <h2>克隆人综合统计数据</h2>
             <div class="form-group">
@@ -1677,6 +1678,75 @@
             damageBonus += calculateBonusForType(shieldBonuses);
             
             return damageBonus;
+        }
+
+        // 新增：从资源计算器导入数据的函数
+        async function importFromCalculator() {
+            // 检查 GM_getValue 是否可用 (由资源计算器脚本提供)
+            if (typeof GM_getValue === 'undefined') {
+                alert('错误：无法访问 GM_getValue。\n请确保"资源计算器"油猴脚本已启用并在当前页面运行。\n您可能需要在脚本的 @match 设置中添加当前页面地址: ' + window.location.href);
+                return;
+            }
+
+            try {
+                const storedDataString = await GM_getValue("stellarOdysseySimulatorData");
+
+                if (!storedDataString) {
+                    alert('错误：未找到来自资源计算器的数据。\n请确认资源计算器脚本已运行并成功捕获或导入了游戏数据。\n如果刚捕获/导入，请稍等片刻或刷新模拟器页面重试。');
+                    return;
+                }
+
+                const storedData = JSON.parse(storedDataString);
+                console.log("从资源计算器导入的数据:", storedData);
+
+                // 填充字段 (使用 ?? 提供默认值)
+                document.getElementById('cloneCount').value = storedData.cloneCount ?? 1;
+                document.getElementById('baseCloneAttack').value = storedData.baseCloneAttack ?? 70;
+                document.getElementById('baseCloneHP').value = storedData.baseCloneHP ?? 800;
+                document.getElementById('critChance').value = storedData.critChance ?? 0;
+                document.getElementById('critDamage').value = storedData.critDamage ?? 0;
+                document.getElementById('reAttackChance').value = storedData.reAttackChance ?? 0;
+                document.getElementById('addAttack').value = storedData.addAttack ?? 10;
+                document.getElementById('addPrecision').value = storedData.addPrecision ?? 10;
+                document.getElementById('addDodge').value = storedData.addDodge ?? 10;
+                document.getElementById('addArmor').value = storedData.addArmor ?? 10;
+                document.getElementById('vipStatus').checked = storedData.vipStatus ?? false;
+                document.getElementById('enemyLevel').value = storedData.enemyLevel ?? 1;
+
+                // 更新全局 bonus 数组和敌人类型
+                window.weaponBonuses = storedData.weaponBonuses || [];
+                window.shieldBonuses = storedData.shieldBonuses || [];
+                window.enemyBonuses = storedData.enemyBonuses || [];
+                window.currentEnemy = storedData.currentEnemy || "";
+
+                // 基于导入的数据重新计算或设置伤害乘数
+                if (storedData.damageMultiplier !== undefined && storedData.damageMultiplier !== null) {
+                    document.getElementById('damageMultiplier').value = storedData.damageMultiplier;
+                } else if (window.weaponBonuses.length > 0 || window.shieldBonuses.length > 0 || window.enemyBonuses.length > 0) {
+                    let damageBonus = calculateDamageBonus(window.weaponBonuses, window.shieldBonuses, window.enemyBonuses);
+                    let multiplier = 1.0 + damageBonus;
+                    document.getElementById('damageMultiplier').value = multiplier.toFixed(2);
+                } else {
+                    document.getElementById('damageMultiplier').value = 1.0; // 默认值
+                }
+
+                // 更新UI和内部状态
+                updateCloneStats();
+                updateEnemyStats();
+                saveToLocalStorage(); // 保存导入的值到本地存储
+
+                const updateTime = storedData.timestamp ? new Date(storedData.timestamp).toLocaleString() : '未知时间';
+                const enemyName = enemyTypeMap[window.currentEnemy] || window.currentEnemy || '未指定';
+                const weaponBonusText = window.weaponBonuses.map(b => bonusTypeMap[b] || b).join(', ') || '无';
+                const shieldBonusText = window.shieldBonuses.map(b => bonusTypeMap[b] || b).join(', ') || '无';
+                const message = `成功从资源计算器导入数据！\n数据来源时间: ${updateTime}\n\n导入敌人: ${enemyName}\n武器改装: ${weaponBonusText}\n护盾改装: ${shieldBonusText}`;
+                document.getElementById('result').textContent = message;
+                alert(message);
+
+            } catch (error) {
+                console.error("导入或处理来自资源计算器的数据时出错:", error);
+                alert('导入数据失败，数据格式可能已损坏或处理时发生错误。\n错误详情: ' + error.message + '\n请检查浏览器控制台获取更多信息。');
+            }
         }
     </script>
 </body>
