@@ -198,7 +198,10 @@
                     <label>新增克隆人成本:</label>
                     <input type="number" id="clonePrice" value="100000000">
                 </div>
-                <button type="button" onclick="compareUpgrades()">比较升级收益</button>
+                <div class="form-group">
+                    <button type="button" onclick="compareUpgrades()">比较升级收益</button>
+                    <button type="button" id="importFromCalcButton" style="background-color: #4CAF50; color: white; margin-left: 5px;">从资源计算器导入</button>
+                </div>
                 
                 <div class="form-group" style="margin-top: 10px;">
                     <label>查看属性升级曲线:</label>
@@ -216,6 +219,7 @@
             <button type="button" onclick="batchSimulate()">批量模拟当前加点</button>
             <button type="button" onclick="findBestBuild()">寻找最优加点</button>
             <button type="button" onclick="findBestAdditionalPoints()">寻找最优新增加点</button>
+            <button type="button" onclick="importFromCalculator()" style="background-color: #4CAF50; color: white;">从计算器导入数据</button>
 
             <div id="progressContainer"> 
                 <progress id="progressBar" value="0" max="100"></progress>
@@ -351,6 +355,9 @@
             
             // 应用收益分析面板显示状态
             toggleAnalysisPanel();
+
+            // 添加自动导入功能初始化
+            initAutoImport();
         };
 
         // 打开JSON导入模态框
@@ -1677,6 +1684,130 @@
             damageBonus += calculateBonusForType(shieldBonuses);
             
             return damageBonus;
+        }
+
+        // 修改原有的initAutoImport函数
+        function initAutoImport() {
+            console.log('初始化自动导入功能...');
+            
+            // 添加导入按钮的点击事件
+            const importButton = document.getElementById('importFromCalcButton');
+            if (importButton) {
+                importButton.onclick = function() {
+                    importFromCalculator();
+                };
+            }
+            
+            // 检查是否有自动导入数据
+            checkForAutoImportData();
+        }
+
+        // 自动检查并导入数据函数
+        function checkForAutoImportData() {
+            const importData = localStorage.getItem('stellarOdyssey_simulatorData');
+            if (importData) {
+                try {
+                    console.log('检测到资源计算器导入数据，正在应用...');
+                    importDataFromCalculator(JSON.parse(importData));
+                    
+                    // 清除数据，避免重复导入
+                    localStorage.removeItem('stellarOdyssey_simulatorData');
+                    
+                    // 显示提示
+                    const resultDiv = document.getElementById('result');
+                    if(resultDiv) {
+                        resultDiv.textContent = '从资源计算器导入数据成功！';
+                        setTimeout(() => {
+                            if(resultDiv.textContent.includes('从资源计算器导入数据成功')) {
+                                resultDiv.textContent = '';
+                            }
+                        }, 3000);
+                    }
+                } catch (error) {
+                    console.error('导入数据出错:', error);
+                    const resultDiv = document.getElementById('result');
+                    if(resultDiv) {
+                        resultDiv.textContent = '导入数据失败: ' + error.message;
+                    }
+                }
+            }
+        }
+
+        // 添加从资源计算器导入数据的函数
+        function importFromCalculator() {
+            const importData = localStorage.getItem('stellarOdyssey_simulatorData');
+            if (importData) {
+                try {
+                    importDataFromCalculator(JSON.parse(importData));
+                    
+                    // 清除数据，避免重复导入
+                    localStorage.removeItem('stellarOdyssey_simulatorData');
+                    
+                    // 显示提示
+                    const resultDiv = document.getElementById('result');
+                    if(resultDiv) {
+                        resultDiv.textContent = '从资源计算器导入数据成功！';
+                        setTimeout(() => {
+                            if(resultDiv.textContent.includes('从资源计算器导入数据成功')) {
+                                resultDiv.textContent = '';
+                            }
+                        }, 3000);
+                    }
+                } catch (error) {
+                    console.error('导入数据出错:', error);
+                    alert('导入数据失败: ' + error.message);
+                }
+            } else {
+                // 如果没有数据，提示用户打开资源计算器
+                if(confirm('未检测到资源计算器的数据。是否打开资源计算器页面？')) {
+                    window.open('https://game.stellarodyssey.app/', '_blank');
+                }
+            }
+        }
+
+        // 处理导入数据的核心函数
+        function importDataFromCalculator(data) {
+            if (!data) {
+                throw new Error('导入数据为空');
+            }
+            
+            // 填充界面数据
+            if(document.getElementById('critChance')) document.getElementById('critChance').value = data.critChance;
+            if(document.getElementById('critDamage')) document.getElementById('critDamage').value = data.critDamage;
+            if(document.getElementById('reAttackChance')) document.getElementById('reAttackChance').value = data.reAttackChance;
+            if(document.getElementById('baseCloneAttack')) document.getElementById('baseCloneAttack').value = data.baseCloneAttack;
+            if(document.getElementById('baseCloneHP')) document.getElementById('baseCloneHP').value = data.baseCloneHP;
+            if(document.getElementById('cloneCount')) document.getElementById('cloneCount').value = data.cloneCount;
+            if(document.getElementById('addAttack')) document.getElementById('addAttack').value = data.addAttack;
+            if(document.getElementById('addPrecision')) document.getElementById('addPrecision').value = data.addPrecision;
+            if(document.getElementById('addDodge')) document.getElementById('addDodge').value = data.addDodge;
+            if(document.getElementById('addArmor')) document.getElementById('addArmor').value = data.addArmor;
+            if(document.getElementById('enemyLevel')) document.getElementById('enemyLevel').value = data.enemyLevel;
+            if(document.getElementById('damageMultiplier')) document.getElementById('damageMultiplier').value = data.damageMultiplier;
+            if(document.getElementById('vipStatus')) document.getElementById('vipStatus').checked = data.vipStatus;
+            
+            // 处理敌人类型和改装
+            if(data.enemyType) {
+                currentEnemy = data.enemyType;
+                
+                // 如果有敌人类型，设置敌人弱点
+                if (enemyWeaknessMap[currentEnemy]) {
+                    enemyBonuses = enemyWeaknessMap[currentEnemy];
+                }
+            }
+            
+            // 设置武器和护盾改装
+            if(data.weaponBonuses && data.weaponBonuses.length) {
+                weaponBonuses = data.weaponBonuses;
+            }
+            
+            if(data.shieldBonuses && data.shieldBonuses.length) {
+                shieldBonuses = data.shieldBonuses;
+            }
+            
+            // 导入完成后更新克隆人属性
+            updateCloneStats();
+            updateEnemyStats();
         }
     </script>
 </body>
