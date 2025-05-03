@@ -128,7 +128,7 @@
             <div class="form-group">
                 <label>会员状态:</label>
                 <input type="checkbox" id="vipStatus" onchange="updateCloneStats()">
-                <span>(生命值提升1.1倍)</span>
+                <span>(会员无任何加成)</span>
             </div>
             <div class="form-group">
                 <label>静默搜索:</label>
@@ -720,7 +720,7 @@
             const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
             const isVip = document.getElementById('vipStatus').checked;
             const cloneStats = {
-                cloneHP: ((baseCloneHP + 7 * B) * (isVip ? 1.1 : 1)).toFixed(1),
+                cloneHP: (baseCloneHP + 7 * B).toFixed(1),
                 cloneAttack: (baseCloneAttack + 7 * A) * cloneCount,
                 clonePrecision: C,
                 cloneDodge: D
@@ -1133,7 +1133,7 @@
                 enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                 enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                 cloneCount: parseInt(document.getElementById('cloneCount').value),
-                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B) * (document.getElementById('vipStatus').checked ? 1.1 : 1),
+                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B),
                 cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value),
                 clonePrecision: build.C,
                 cloneDodge: build.D,
@@ -1166,7 +1166,7 @@
             const isVip = document.getElementById('vipStatus').checked;
             const cloneCount = parseInt(document.getElementById('cloneCount').value);
             
-            const cloneHP = ((baseCloneHP + 7 * build.B) * (isVip ? 1.1 : 1)).toFixed(1);
+            const cloneHP = (baseCloneHP + 7 * build.B).toFixed(1);
             const cloneAttack = (baseCloneAttack + 7 * build.A) * cloneCount;
             
             // 如果不是静默搜索，则更新DOM
@@ -1307,7 +1307,7 @@
                     enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                     enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                     cloneCount: parseInt(document.getElementById('cloneCount').value),
-                    cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B) * (document.getElementById('vipStatus').checked ? 1.1 : 1),
+                    cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B),
                     cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value),
                     clonePrecision: newBuild.C,
                     cloneDodge: newBuild.D,
