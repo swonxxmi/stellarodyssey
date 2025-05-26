@@ -1025,10 +1025,32 @@
         function updateEnemyStats() {
             const level = parseInt(document.getElementById('enemyLevel').value) || 1;
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.3;
-            const enemyAttack = (7 * level).toFixed(0);
-            const enemyPrecision = (level * 2).toFixed(0);
-            const enemyDodge = (level * 2).toFixed(0);
-            const enemyHP = (level * 800 / damageMultiplier).toFixed(0); // 修改为模拟伤害的倍率
+            
+            // 计算敌人攻击力
+            let enemyAttack;
+            if (level < 100) {
+                enemyAttack = Math.floor(7.0 * level);
+            } else {
+                enemyAttack = Math.floor(7.0 * 1.1 * level);
+            }
+            
+            // 计算敌人精准和闪避
+            let enemyPrecision, enemyDodge;
+            if (level < 100) {
+                enemyPrecision = Math.floor(1.0 * level);
+                enemyDodge = Math.floor(1.0 * level);
+            } else {
+                enemyPrecision = Math.floor(1.0 * 1.5 * level);
+                enemyDodge = Math.floor(1.0 * 1.5 * level);
+            }
+            
+            // 计算敌人生命值
+            let enemyHP;
+            if (level < 150) {
+                enemyHP = Math.floor(1300.0 * level / damageMultiplier);
+            } else {
+                enemyHP = Math.floor(1300.0 * 1.2 * level / damageMultiplier);
+            }
 
             document.getElementById('enemyHP').textContent = enemyHP;
             document.getElementById('enemyAttack').textContent = enemyAttack;
@@ -1039,10 +1061,32 @@
         // 修改getParamsForLevel函数，移除重复的伤害加成计算
         function getParamsForLevel(level) {
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
-            const enemyHP = Math.round(level * 800 / damageMultiplier);
-            const enemyAttack = level * 7;
-            const enemyPrecision = level * 2;
-            const enemyDodge = level * 2;
+            
+            // 计算敌人生命值
+            let enemyHP;
+            if (level < 150) {
+                enemyHP = Math.floor(1300.0 * level / damageMultiplier);
+            } else {
+                enemyHP = Math.floor(1300.0 * 1.2 * level / damageMultiplier);
+            }
+            
+            // 计算敌人攻击力
+            let enemyAttack;
+            if (level < 100) {
+                enemyAttack = Math.floor(7.0 * level);
+            } else {
+                enemyAttack = Math.floor(7.0 * 1.1 * level);
+            }
+            
+            // 计算敌人精准和闪避
+            let enemyPrecision, enemyDodge;
+            if (level < 100) {
+                enemyPrecision = Math.floor(1.0 * level);
+                enemyDodge = Math.floor(1.0 * level);
+            } else {
+                enemyPrecision = Math.floor(1.0 * 1.5 * level);
+                enemyDodge = Math.floor(1.0 * 1.5 * level);
+            }
             
             // 读取克隆人UI元素，避免重复获取
             const critChance = parseFloat(document.getElementById('critChance').value) / 100;
