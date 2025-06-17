@@ -188,7 +188,6 @@
             background-color: rgba(0, 0, 0, 0.05);
         }
         #analysisPanel { display: block; }
-        /* 模态框样式 */
         .modal {
             display: none;
             position: fixed;
@@ -335,25 +334,31 @@
                 <span id="totalPoints" class="stat-value">320</span>
                 <span id="totalPointsWarning" style="display: none;">加点总和发生变化！当前总点数：<span id="totalPointsValue">320</span></span>
             </div>
-            <button type="button" onclick="resetToAverage()" class="secondary">平均分配</button>
-            <button type="button" onclick="openJsonImportModal()">导入JSON数据</button>
+           
+            <div class="form-group" style="margin-top: 15px;">
+                <label>API Key:</label>
+                <input type="text" id="apiKeyInput" placeholder="在此输入您的sodyssey-api-key" oninput="saveToLocalStorage()">
+                <input type="checkbox" id="autoLoadApi" onchange="saveToLocalStorage()">
+                <label for="autoLoadApi">自动加载API</label>
+            </div>
+            <button type="button" onclick="importFromApi()" class="primary">从API导入数据</button>
 
             <h2>克隆人综合统计数据</h2>
             <div class="form-group">
                 <label>玩家生命值:</label>
-                <span id="cloneHP" class="stat-value">1892.0</span>
+                <span id="cloneHP" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawSingleCloneHP"></span>)</span>
             </div>
             <div class="form-group">
                 <label>玩家伤害:</label>
-                <span id="cloneAttack" class="stat-value">6510</span>
+                <span id="cloneAttack" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawCloneAttack"></span>)</span>
             </div>
             <div class="form-group">
                 <label>精准:</label>
-                <span id="clonePrecision" class="stat-value">114</span>
+                <span id="clonePrecision" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawPrecision"></span>)</span>
             </div>
             <div class="form-group">
                 <label>闪避:</label>
-                <span id="cloneDodge" class="stat-value">42</span>
+                <span id="cloneDodge" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawDodge"></span>)</span>
             </div>
             <div class="form-group">
                 <label>会员状态:</label>
@@ -363,7 +368,7 @@
             <div class="form-group">
                 <label>静默搜索:</label>
                 <input type="checkbox" id="silentSearch" checked>
-                <span class="tooltip">(不实时更新属性)<span class="tooltiptext">开启后寻找最优加点时不会实时更新界面显示</span></span>
+                <span class="tooltip">(不实时更新属性)<span class="tooltiptext">开启后寻找加点时不会实时更新界面显示</span></span>
             </div>
         </div>
 
@@ -444,7 +449,6 @@
                 </div>
             </div>
 
-            <!-- 在敌人参数设置区域添加多线程开关 -->
             <div class="form-group">
                 <label>启用多线程:</label>
                 <input type="checkbox" id="enableMultithreading" checked>
@@ -466,26 +470,9 @@
         </div>
     </div>
 
-    <!-- 添加JSON导入模态框 -->
-    <div id="jsonImportModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeJsonImportModal()">×</span>
-            <h2>导入JSON数据</h2>
-            <p>请在下方输入JSON数据或API Key：</p>
-            <textarea id="jsonInput" placeholder="在此粘贴JSON数据..."></textarea>
-            <div class="form-group" style="margin-bottom: 13px;">
-                <label>API Key:</label>
-                <input type="text" id="apiKeyInput" placeholder="在此输入您的sodyssey-api-key">
-            </div>
-            <button type="button" onclick="importJsonData()" class="success">导入</button>
-            <button type="button" onclick="importFromApi()" class="primary">从API导入</button>
-        </div>
-    </div>
-
     <script>
         // 在script开始部分添加全局变量
         let cloneStatsCache = {}; // 缓存克隆人统计数据
-        let useRawCritDamage = false; // 是否使用原始暴击伤害倍率
         let enemyBonuses = []; // 敌人弱点
         let weaponBonuses = []; // 武器改装
         let shieldBonuses = []; // 护盾改装
@@ -568,12 +555,18 @@
                 vipStatus: document.getElementById('vipStatus'),
                 silentSearch: document.getElementById('silentSearch'),
                 enableMultithreading: document.getElementById('enableMultithreading'),
-                battleBoostLevel: document.getElementById('battleBoostLevel')
+                battleBoostLevel: document.getElementById('battleBoostLevel'),
+                apiKeyInput: document.getElementById('apiKeyInput'),
+                autoLoadApi: document.getElementById('autoLoadApi'),
+                rawCloneAttack: document.getElementById('rawCloneAttack'),
+                rawPrecision: document.getElementById('rawPrecision'),
+                rawDodge: document.getElementById('rawDodge'),
+                rawSingleCloneHP: document.getElementById('rawSingleCloneHP')
             };
 
             // 恢复输入值
             for (const key in elements) {
-                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus' && key !== 'silentSearch' && key !== 'enableMultithreading' && key !== 'battleBoostLevel') {
+                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus' && key !== 'silentSearch' && key !== 'enableMultithreading' && key !== 'battleBoostLevel' && key !== 'autoLoadApi' && key !== 'rawCloneAttack' && key !== 'rawPrecision' && key !== 'rawDodge' && key !== 'rawSingleCloneHP') {
                     elements[key].value = localStorage.getItem(key) || elements[key].value;
                 }
             }
@@ -601,6 +594,22 @@
                 elements.battleBoostLevel.value = battleBoostLevel !== null ? battleBoostLevel : elements.battleBoostLevel.value;
             }
 
+            // 恢复 API Key
+            const apiKeyInput = localStorage.getItem('apiKeyInput');
+            if (elements.apiKeyInput) {
+                elements.apiKeyInput.value = apiKeyInput !== null ? apiKeyInput : '';
+            }
+            // 恢复自动加载API复选框状态
+            const autoLoadApiChecked = localStorage.getItem('autoLoadApi');
+            if (elements.autoLoadApi) {
+                elements.autoLoadApi.checked = autoLoadApiChecked !== null ? autoLoadApiChecked === 'true' : true; // Default to true
+            }
+
+            // 如果有API Key且自动加载复选框被选中，自动导入数据
+            if (elements.apiKeyInput.value && elements.autoLoadApi.checked) {
+                importFromApi();
+            }
+
             // 获取实际总点数
             const currentTotalPoints = getCurrentTotalPoints();
             elements.totalPointsValue.textContent = currentTotalPoints;
@@ -613,312 +622,195 @@
             toggleAnalysisPanel();
         };
 
-        // 打开JSON导入模态框
-        function openJsonImportModal() {
-            document.getElementById('jsonImportModal').style.display = 'block';
-        }
+        // 导入JSON数据 (simplified to only accept jsonData object)
+        function importJsonData(jsonData) { // now expects parsed JSON directly
+            let message = '导入的数据：\n';
+            let player = null; // 定义一个player变量来统一数据源
 
-        // 关闭JSON导入模态框
-        function closeJsonImportModal() {
-            document.getElementById('jsonImportModal').style.display = 'none';
-        }
-
-        // 导入JSON数据
-        function importJsonData(dataFromApi = null) {
-            const jsonText = dataFromApi ? JSON.stringify(dataFromApi) : document.getElementById('jsonInput').value;
-            if (!jsonText) {
-                alert('请输入JSON数据或从API导入');
+            // 根据数据来源确定player对象
+            if (jsonData.user && jsonData.user.player) {
+                player = jsonData.user.player; // API数据结构
+            } else if (jsonData.data) {
+                player = jsonData.data; // 本地json.json结构
+            } else {
+                alert('无法识别导入的JSON数据格式。请确保是有效的星际漫游API数据或示例JSON文件。');
                 return;
             }
 
-            try {
-                const jsonData = JSON.parse(jsonText);
-                let message = '导入的数据：\n';
-                let found = false;
-                let hasFoundModifiers = false; // 标记是否找到了改装和敌人弱点
-                
-                // 清空之前的改装和敌人数据
-                enemyBonuses = [];
-                weaponBonuses = [];
-                shieldBonuses = [];
-                currentEnemy = "";
-                
-                // 检查是否为星际漫游游戏数据，尝试提取其中的克隆人和玩家属性数据
-                if (jsonData.user && jsonData.user.player) {
-                    found = true;
-                    const player = jsonData.user.player;
-                    
-                    // 取消原始暴击伤害倍率标志
-                    useRawCritDamage = false;
-                    
-                    // 检测会员状态并应用
-                    if (player.premium && player.premium.active === true) {
-                        document.getElementById('vipStatus').checked = true;
-                        message += `会员状态：已激活（有效期至：${new Date(player.premium.dateEnd * 1000).toLocaleDateString()}）\n`;
-                    } else {
-                        document.getElementById('vipStatus').checked = false;
-                        message += `会员状态：未激活\n`;
+            if (!player) {
+                alert('未能从JSON数据中找到有效的玩家信息。');
+                return;
+            }
+            
+            let hasFoundModifiers = false; // 标记是否找到了改装和敌人弱点
+            
+            // 清空之前的改装和敌人数据
+            enemyBonuses = [];
+            weaponBonuses = [];
+            shieldBonuses = [];
+            currentEnemy = "";
+            
+            // 处理会员状态
+            if (player.premium !== undefined) {
+                // 检查是否是 API 返回的 { active: true, dateEnd: ... } 结构
+                if (typeof player.premium === 'object' && player.premium.active !== undefined) {
+                    document.getElementById('vipStatus').checked = player.premium.active;
+                    message += `会员状态：${player.premium.active ? '已激活' : '未激活'}\n`;
+                    if (player.premium.dateEnd) {
+                        message += `（有效期至：${new Date(player.premium.dateEnd * 1000).toLocaleDateString()}）\n`;
                     }
-                    
-                    // 导入克隆人数据 - 计算所有克隆人的平均属性
-                    if (player.clones && player.clones.length > 0) {
-                        const cloneCount = player.clones.length;
-                        
-                        // 计算平均值
-                        let totalCritChance = 0;
-                        let totalCritDamage = 0;
-                        let totalDualShot = 0;
-                        
-                        // 遍历所有克隆人，累加属性值
-                        player.clones.forEach(clone => {
-                            if (clone.critical_chance !== undefined) totalCritChance += clone.critical_chance;
-                            if (clone.critical_damage !== undefined) totalCritDamage += clone.critical_damage; // 这是百分比加成值
-                            if (clone.dual_shot !== undefined) totalDualShot += clone.dual_shot;
-                        });
-                        
-                        // 计算平均值并保留一位小数
-                        const avgCritChance = (totalCritChance / cloneCount).toFixed(1);
-                        const avgCritDamage = (totalCritDamage / cloneCount).toFixed(1);
-                        const avgDualShot = (totalDualShot / cloneCount).toFixed(1);
-                        
-                        // 设置值
-                        document.getElementById('critChance').value = avgCritChance;
-                        document.getElementById('critDamage').value = avgCritDamage; // 暴击伤害是纯增益值，1.5%对应的最终倍率为131.5%
-                        document.getElementById('reAttackChance').value = avgDualShot;
-                        
-                        // 添加到消息
-                        message += `暴击几率：${avgCritChance}%\n`;
-                        message += `暴击伤害加成：${avgCritDamage}%（实际伤害倍率：${(130 + parseFloat(avgCritDamage)).toFixed(1)}%）\n`;
-                        message += `双重射击：${avgDualShot}%\n`;
-                    }
-                    
-                    // 导入武器和护盾数据
-                    if (player.ship) {
-                        // 处理武器
-                        if (player.ship.weapon_slot) {
-                            const weapon = player.ship.weapon_slot;
-                            baseCloneAttackValue = weapon.value || 0;
-                            document.getElementById('baseCloneAttack').value = baseCloneAttackValue;
-                            message += `武器伤害：${baseCloneAttackValue}\n`;
-                            
-                            // 处理武器改装
-                            if (weapon.bonuses && weapon.bonuses.length > 0) {
-                                weaponBonuses = weapon.bonuses;
-                                const bonusText = weaponBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
-                                message += `武器改装：${bonusText}\n`;
-                            }
-                        }
-                        
-                        // 处理护盾
-                        if (player.ship.shield_slot) {
-                            const shield = player.ship.shield_slot;
-                            baseCloneHPValue = shield.value || 0;
-                            document.getElementById('baseCloneHP').value = baseCloneHPValue;
-                            message += `护盾防御：${baseCloneHPValue}\n`;
-                            
-                            // 处理护盾改装
-                            if (shield.bonuses && shield.bonuses.length > 0) {
-                                shieldBonuses = shield.bonuses;
-                                const bonusText = shieldBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
-                                message += `护盾改装：${bonusText}\n`;
-                            }
-                        }
-                    }
-                    
-                    // 处理当前敌人类型和弱点
-                    if (player.actions && player.actions.battling_current_npc) {
-                        currentEnemy = player.actions.battling_current_npc.toLowerCase();
-                        if (enemyWeaknessMap[currentEnemy]) {
-                            enemyBonuses = enemyWeaknessMap[currentEnemy];
-                            const weaknessText = enemyBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
-                            message += `敌人类型：${enemyTypeMap[currentEnemy] || currentEnemy}\n`;
-                            message += `敌人弱点：${weaknessText}\n`;
-                            
-                            // 计算伤害加成并设置到模组伤害加成字段
-                            const result = applyDamageBonus(message, weaponBonuses, shieldBonuses, enemyBonuses);
-                            message = result.message;
-                            hasFoundModifiers = result.hasFoundModifiers;
-                        }
-                    }
-                    
-                    // 导入玩家统计数据
-                    if (player.stats) {
-                        // 能量加点 - power
-                        if (player.stats.power !== undefined) {
-                            document.getElementById('addAttack').value = player.stats.power;
-                            message += `能量加点：${player.stats.power}\n`;
-                        }
-                        
-                        // 精准加点 - precision
-                        if (player.stats.precision !== undefined) {
-                            document.getElementById('addPrecision').value = player.stats.precision;
-                            message += `精准加点：${player.stats.precision}\n`;
-                        }
-                        
-                        // 闪避加点 - evasion
-                        if (player.stats.evasion !== undefined) {
-                            document.getElementById('addDodge').value = player.stats.evasion;
-                            message += `闪避加点：${player.stats.evasion}\n`;
-                        }
-                        
-                        // 装甲加点 - hull
-                        if (player.stats.hull !== undefined) {
-                            document.getElementById('addArmor').value = player.stats.hull;
-                            message += `装甲加点：${player.stats.hull}\n`;
-                        }
-                    }
-                    
-                    // 设置敌人等级 - 优先使用当前战斗敌人等级
-                    if (player.actions && player.actions.battling_current_npc_level) {
-                        document.getElementById('enemyLevel').value = player.actions.battling_current_npc_level;
-                        message += `敌人等级：${player.actions.battling_current_npc_level}\n`;
-                    } else if (player.levels && player.levels.battling_level) {
-                        // 如果没有当前敌人等级，才使用玩家战斗等级作为后备
-                        document.getElementById('enemyLevel').value = player.levels.battling_level;
-                        message += `敌人等级：${player.levels.battling_level}（使用玩家战斗等级作为后备）\n`;
-                    }
-                    
-                    // 设置克隆人数量
-                    if (player.clones) {
-                        document.getElementById('cloneCount').value = player.clones.length;
-                        message += `克隆人数量：${player.clones.length}\n`;
-                    }
-
-                    // 设置战斗提升等级 - 从 player.stats.battle_boost_level 获取
-                    if (player.stats && player.stats.battle_boost_level !== undefined) {
-                        document.getElementById('battleBoostLevel').value = player.stats.battle_boost_level;
-                        message += `战斗提升等级：${player.stats.battle_boost_level}\n`;
-                    }
-
-
+                } else { // 假设是直接的布尔值
+                    document.getElementById('vipStatus').checked = player.premium;
+                    message += `会员状态：${player.premium ? '已激活' : '未激活'}\n`;
                 }
-                else {
-                    // 如果不是游戏数据，使用手动导入格式
-                    useRawCritDamage = false;
-                    
-                    // 处理会员状态
-                    if (jsonData.vipStatus !== undefined) {
-                        document.getElementById('vipStatus').checked = jsonData.vipStatus;
-                        message += `会员状态：${jsonData.vipStatus ? '已激活' : '未激活'}\n`;
-                    }
-                    
-                    // 装备与属性
-                    if (jsonData.cloneCount !== undefined) {
-                        document.getElementById('cloneCount').value = jsonData.cloneCount;
-                        message += `克隆人数量：${jsonData.cloneCount}\n`;
-                    }
-                    
-                    if (jsonData.baseCloneAttack !== undefined) {
-                        document.getElementById('baseCloneAttack').value = jsonData.baseCloneAttack;
-                        message += `武器伤害：${jsonData.baseCloneAttack}\n`;
-                    }
-                    
-                    if (jsonData.baseCloneHP !== undefined) {
-                        document.getElementById('baseCloneHP').value = jsonData.baseCloneHP;
-                        message += `护盾防御：${jsonData.baseCloneHP}\n`;
-                    }
-                    
-                    if (jsonData.critChance !== undefined) {
-                        document.getElementById('critChance').value = jsonData.critChance;
-                        message += `暴击几率：${jsonData.critChance}%\n`;
-                    }
-                    
-                    if (jsonData.critDamage !== undefined) {
-                        document.getElementById('critDamage').value = jsonData.critDamage;
-                        message += `暴击伤害加成：${jsonData.critDamage}%\n`;
-                    }
-                    
-                    if (jsonData.reAttackChance !== undefined) {
-                        document.getElementById('reAttackChance').value = jsonData.reAttackChance;
-                        message += `双重射击：${jsonData.reAttackChance}%\n`;
-                    }
-                    
-                    // 统计数据分配
-                    if (jsonData.addAttack !== undefined) {
-                        document.getElementById('addAttack').value = jsonData.addAttack;
-                        message += `能量加点：${jsonData.addAttack}\n`;
-                    }
-                    
-                    if (jsonData.addPrecision !== undefined) {
-                        document.getElementById('addPrecision').value = jsonData.addPrecision;
-                        message += `精准加点：${jsonData.addPrecision}\n`;
-                    }
-                    
-                    if (jsonData.addDodge !== undefined) {
-                        document.getElementById('addDodge').value = jsonData.addDodge;
-                        message += `闪避加点：${jsonData.addDodge}\n`;
-                    }
-                    
-                    if (jsonData.addArmor !== undefined) {
-                        document.getElementById('addArmor').value = jsonData.addArmor;
-                        message += `装甲加点：${jsonData.addArmor}\n`;
-                    }
-                    
-                    // 敌人参数
-                    if (jsonData.enemyLevel !== undefined) {
-                        document.getElementById('enemyLevel').value = jsonData.enemyLevel;
-                        message += `敌人等级：${jsonData.enemyLevel}\n`;
-                    }
-                    
-                    if (jsonData.damageMultiplier !== undefined) {
-                        document.getElementById('damageMultiplier').value = jsonData.damageMultiplier;
-                        message += `模组伤害加成：${jsonData.damageMultiplier}\n`;
-                        hasFoundModifiers = true;
-                    }
+            }
+            
+            // 导入克隆人数据 - 计算所有克隆人的平均属性
+            if (player.clones && player.clones.length > 0) {
+                const cloneCount = player.clones.length;
+                
+                // 计算平均值
+                let totalCritChance = 0;
+                let totalCritDamage = 0.0;
+                let totalDualShot = 0;
+                
+                // 遍历所有克隆人，累加属性值
+                player.clones.forEach(clone => {
+                    if (clone.critical_chance !== undefined) totalCritChance += clone.critical_chance;
+                    if (clone.critical_damage !== undefined) totalCritDamage += clone.critical_damage; // 这是百分比加成值
+                    if (clone.dual_shot !== undefined) totalDualShot += clone.dual_shot;
+                });
+                
+                // 计算平均值并保留一位小数
+                const avgCritChance = (totalCritChance / cloneCount).toFixed(1);
+                const avgCritDamage = (totalCritDamage / cloneCount).toFixed(1);
+                const avgDualShot = (totalDualShot / cloneCount).toFixed(1);
+                
+                // 设置值
+                document.getElementById('critChance').value = avgCritChance;
+                document.getElementById('critDamage').value = avgCritDamage; // 暴击伤害是纯增益值，1.5%对应的最终倍率为131.5%
+                document.getElementById('reAttackChance').value = avgDualShot;
+                
+                // 添加到消息
+                message += `暴击几率：${avgCritChance}%\n`;
+                message += `暴击伤害加成：${avgCritDamage}%（实际伤害倍率：${(130 + parseFloat(avgCritDamage)).toFixed(1)}%）\n`;
+                message += `双重射击：${avgDualShot}%\n`;
 
-                    if (jsonData.battleBoostLevel !== undefined) {
-                        document.getElementById('battleBoostLevel').value = jsonData.battleBoostLevel;
-                        message += `战斗提升等级：${jsonData.battleBoostLevel}\n`;
-                    }
-
-                    // 处理武器改装和护盾改装（如果JSON中有提供）
-                    if (jsonData.weaponBonuses !== undefined && Array.isArray(jsonData.weaponBonuses)) {
-                        weaponBonuses = jsonData.weaponBonuses;
+                // 设置克隆人数量
+                document.getElementById('cloneCount').value = cloneCount;
+                message += `克隆人数量：${cloneCount}\n`;
+            }
+            
+            // 导入武器和护盾数据
+            if (player.ship) {
+                // 处理武器
+                const weapon = player.ship.weapon_slot || player.ship.weapon; // 兼容 weapon_slot 和 weapon
+                if (weapon) {
+                    baseCloneAttackValue = weapon.value || 0;
+                    document.getElementById('baseCloneAttack').value = baseCloneAttackValue;
+                    message += `武器伤害：${baseCloneAttackValue}\n`;
+                    
+                    // 处理武器改装
+                    if (weapon.bonuses && weapon.bonuses.length > 0) {
+                        weaponBonuses = weapon.bonuses;
                         const bonusText = weaponBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
                         message += `武器改装：${bonusText}\n`;
                     }
+                }
+                
+                // 处理护盾
+                const shield = player.ship.shield_slot || player.ship.shield; // 兼容 shield_slot 和 shield
+                if (shield) {
+                    baseCloneHPValue = shield.value || 0;
+                    document.getElementById('baseCloneHP').value = baseCloneHPValue;
+                    message += `护盾防御：${baseCloneHPValue}\n`;
                     
-                    if (jsonData.shieldBonuses !== undefined && Array.isArray(jsonData.shieldBonuses)) {
-                        shieldBonuses = jsonData.shieldBonuses;
+                    // 处理护盾改装
+                    if (shield.bonuses && shield.bonuses.length > 0) {
+                        shieldBonuses = shield.bonuses;
                         const bonusText = shieldBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
                         message += `护盾改装：${bonusText}\n`;
                     }
-                    
-                    // 处理敌人类型和弱点
-                    if (jsonData.enemyType) {
-                        currentEnemy = jsonData.enemyType.toLowerCase();
-                        if (enemyWeaknessMap[currentEnemy]) {
-                            enemyBonuses = enemyWeaknessMap[currentEnemy];
-                            const weaknessText = enemyBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
-                            message += `敌人类型：${enemyTypeMap[currentEnemy] || currentEnemy}\n`;
-                            message += `敌人弱点：${weaknessText}\n`;
-                            
-                            // 计算伤害加成并应用到模组伤害加成
-                            const result = applyDamageBonus(message, weaponBonuses, shieldBonuses, enemyBonuses, true, jsonData.damageMultiplier);
-                            message = result.message;
-                            hasFoundModifiers = result.hasFoundModifiers;
-                        }
-                    }
                 }
-                
-                // 如果没有找到改装相关信息，则将模组伤害加成设为1
-                if (!hasFoundModifiers && jsonData.damageMultiplier === undefined) {
-                    document.getElementById('damageMultiplier').value = '1.0';
-                    message += `模组伤害加成：1.0（未找到改装信息）\n`;
-                }
-                
-                // 更新统计数据
-                updateCloneStats();
-                updateEnemyStats();
-                
-                // 显示导入结果
-                document.getElementById('result').textContent = message;
-                
-                // 关闭模态框
-                closeJsonImportModal();
-            } catch (error) {
-                alert('JSON数据格式不正确，请检查后重试: ' + error.message);
             }
+            
+            // 处理当前敌人类型和弱点
+            const currentNpc = player.actions && (player.actions.battling_current_npc || player.actions.currentNpc); // 兼容 battling_current_npc 和 currentNpc
+            if (currentNpc) {
+                currentEnemy = currentNpc.toLowerCase();
+                if (enemyWeaknessMap[currentEnemy]) {
+                    enemyBonuses = enemyWeaknessMap[currentEnemy];
+                    const weaknessText = enemyBonuses.map(bonus => bonusTypeMap[bonus] || bonus).join(", ");
+                    message += `敌人类型：${enemyTypeMap[currentEnemy] || currentEnemy}\n`;
+                    message += `敌人弱点：${weaknessText}\n`;
+                    
+                    // 计算伤害加成并设置到模组伤害加成字段
+                    const result = applyDamageBonus(weaponBonuses, shieldBonuses, enemyBonuses);
+                    document.getElementById('damageMultiplier').value = result.multiplier.toFixed(2);
+                    message += `改装伤害加成：${(result.damageBonus * 100).toFixed(0)}%（倍率：${result.multiplier.toFixed(2)}）\n`;
+                    hasFoundModifiers = true;
+                }
+            }
+            
+            // 导入玩家统计数据
+            if (player.stats) {
+                // 能量加点 - power
+                if (player.stats.power !== undefined) {
+                    document.getElementById('addAttack').value = player.stats.power;
+                    message += `能量加点：${player.stats.power}\n`;
+                }
+                
+                // 精准加点 - precision
+                if (player.stats.precision !== undefined) {
+                    document.getElementById('addPrecision').value = player.stats.precision;
+                    message += `精准加点：${player.stats.precision}\n`;
+                }
+                
+                // 闪避加点 - evasion
+                if (player.stats.evasion !== undefined) {
+                    document.getElementById('addDodge').value = player.stats.evasion;
+                    message += `闪避加点：${player.stats.evasion}\n`;
+                }
+                
+                // 装甲加点 - hull
+                if (player.stats.hull !== undefined) {
+                    document.getElementById('addArmor').value = player.stats.hull;
+                    message += `装甲加点：${player.stats.hull}\n`;
+                }
+            }
+            
+            // 设置敌人等级 - 优先使用当前战斗敌人等级
+            const enemyLevelInActions = player.actions && (player.actions.battling_current_npc_level || player.actions.currentNpcLevel); // 兼容
+            if (enemyLevelInActions !== undefined) {
+                document.getElementById('enemyLevel').value = enemyLevelInActions;
+                message += `敌人等级：${enemyLevelInActions}\n`;
+            } else if (player.levels && player.levels.battling_level !== undefined) {
+                // 如果没有当前敌人等级，才使用玩家战斗等级作为后备
+                document.getElementById('enemyLevel').value = player.levels.battling_level;
+                message += `敌人等级：${player.levels.battling_level}（使用玩家战斗等级作为后备）\n`;
+            }
+            
+            // 设置战斗提升等级 - 从 spacestation.battling_boost 获取
+            if (player.spacestation && player.spacestation.battling_boost !== undefined) {
+                document.getElementById('battleBoostLevel').value = player.spacestation.battling_boost;
+                message += `战斗提升等级：${player.spacestation.battling_boost}\n`;
+            }
+
+            // 如果没有找到改装相关信息，则将模组伤害加成设为1
+            if (!hasFoundModifiers && jsonData.damageMultiplier === undefined) { // Check if it was provided directly in flat manual import
+                document.getElementById('damageMultiplier').value = '1.0';
+                message += `模组伤害加成：1.0（未找到改装信息）\n`;
+            } else if (jsonData.damageMultiplier !== undefined && !hasFoundModifiers) { // If it was provided directly and not calculated
+                 document.getElementById('damageMultiplier').value = jsonData.damageMultiplier;
+                 message += `模组伤害加成：${jsonData.damageMultiplier}（从导入数据获取）\n`;
+            }
+            
+            // 更新统计数据
+            updateCloneStats();
+            updateEnemyStats();
+            
+            // 显示导入结果
+            document.getElementById('result').textContent = message;
         }
 
         // 新增导入API数据函数
@@ -944,7 +836,7 @@
                 }
 
                 const data = await response.json();
-                importJsonData(data); // 使用通用的导入函数处理API返回的数据
+                importJsonData(data); // Use the unified import function
 
             } catch (error) {
                 document.getElementById('result').textContent = '从API导入数据失败: ' + error.message;
@@ -954,24 +846,12 @@
         }
 
         // 计算伤害加成并设置到模组伤害加成字段的通用函数
-        function applyDamageBonus(message, weaponBonuses, shieldBonuses, enemyWeaknesses, skipIfDefined = false, damageMultiplier = undefined) {
-            let hasFoundModifiers = false;
+        function applyDamageBonus(weaponBonuses, shieldBonuses, enemyWeaknesses) {
+            let damageBonus = calculateDamageBonus(weaponBonuses, shieldBonuses, enemyWeaknesses);
+            // 将百分比转换为倍率格式 (例如：60% -> 1.6)
+            let multiplier = 1.0 + damageBonus;
             
-            // 如果damageMultiplier已定义且skipIfDefined为true，则跳过处理
-            if (skipIfDefined && damageMultiplier !== undefined) {
-                return { message, hasFoundModifiers };
-            }
-            
-            if (weaponBonuses.length > 0 || shieldBonuses.length > 0) {
-                let damageBonus = calculateDamageBonus(weaponBonuses, shieldBonuses, enemyWeaknesses);
-                // 将百分比转换为倍率格式 (例如：60% -> 1.6)
-                let multiplier = 1.0 + damageBonus;
-                document.getElementById('damageMultiplier').value = multiplier.toFixed(2);
-                message += `改装伤害加成：${(damageBonus * 100).toFixed(0)}%（倍率：${multiplier.toFixed(2)}）\n`;
-                hasFoundModifiers = true;
-            }
-            
-            return { message, hasFoundModifiers };
+            return { damageBonus, multiplier };
         }
 
         // 获取当前总点数
@@ -1027,26 +907,42 @@
             // 计算克隆人参数
             const baseCloneHPVal = parseFloat(document.getElementById('baseCloneHP').value);
             const baseCloneAttackVal = parseFloat(document.getElementById('baseCloneAttack').value);
-            // const isVip = document.getElementById('vipStatus').checked; // 此变量未被使用
+            const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
+            // 此变量未被使用
 
-            const calculatedCloneHP = (baseCloneHPVal + 7 * B) * boostMultiplier;
-            const calculatedCloneAttack = ((baseCloneAttackVal + 7 * A) * cloneCount) * boostMultiplier;
+            const rawSingleCloneHP = baseCloneHPVal + 7 * B;
+            const singleCloneHPAfterBoost = rawSingleCloneHP * boostMultiplier;
+            const totalCloneHPForDisplay = singleCloneHPAfterBoost * cloneCount; // Total HP for all clones for UI
+
+            const rawSingleCloneAttack = baseCloneAttackVal + 7 * A;
+            const singleCloneAttackAfterBoost = rawSingleCloneAttack * boostMultiplier; // This is single clone attack after boost
+
+            const totalCloneAttackForSimulation = singleCloneAttackAfterBoost * cloneCount * damageMultiplier; // Total attack for simulation
             const calculatedClonePrecision = C * boostMultiplier;
             const calculatedCloneDodge = D * boostMultiplier;
 
-            // 缓存克隆人统计数据（存储数值）
+            // Cache clone stats for worker (sim)
             cloneStatsCache = {
-                cloneHP: calculatedCloneHP,
-                cloneAttack: calculatedCloneAttack,
+                cloneHP: singleCloneHPAfterBoost, // Worker expects single clone HP after boost
+                cloneAttack: totalCloneAttackForSimulation, // Worker expects total clone attack after all multipliers
                 clonePrecision: calculatedClonePrecision,
                 cloneDodge: calculatedCloneDodge
             };
 
-            // 更新DOM（应用向下取整并格式化显示）
-            document.getElementById('cloneHP').textContent = Math.floor(calculatedCloneHP).toFixed(1);
-            document.getElementById('cloneAttack').textContent = Math.floor(calculatedCloneAttack).toFixed(0);
-            document.getElementById('clonePrecision').textContent = Math.floor(calculatedClonePrecision).toFixed(0);
-            document.getElementById('cloneDodge').textContent = Math.floor(calculatedCloneDodge).toFixed(0);
+            console.log(`updateCloneStats: Cache: cloneHP=${cloneStatsCache.cloneHP.toFixed(2)}, cloneAttack=${cloneStatsCache.cloneAttack.toFixed(2)}, damageMultiplier=${damageMultiplier}`);
+
+            // Update DOM (apply floor and format display)
+            document.getElementById('cloneHP').textContent = Math.floor(totalCloneHPForDisplay).toFixed(1); // Total HP for all clones for UI
+            document.getElementById('rawSingleCloneHP').textContent = Math.floor(rawSingleCloneHP).toFixed(1); // Raw single clone HP for UI
+
+            document.getElementById('cloneAttack').textContent = Math.floor(totalCloneAttackForSimulation).toFixed(0); // Total attack for UI
+            document.getElementById('rawCloneAttack').textContent = Math.floor(rawSingleCloneAttack * cloneCount).toFixed(0); // Raw total attack for UI
+
+            document.getElementById('clonePrecision').textContent = Math.floor(calculatedClonePrecision).toFixed(0); // Boosted precision for UI
+            document.getElementById('rawPrecision').textContent = C; // Raw addPrecision value for UI
+
+            document.getElementById('cloneDodge').textContent = Math.floor(calculatedCloneDodge).toFixed(0); // Boosted dodge for UI
+            document.getElementById('rawDodge').textContent = D; // Raw addDodge value for UI
 
         }, 100); // 每100毫秒更新一次
 
@@ -1078,13 +974,19 @@
                 vipStatus: document.getElementById('vipStatus'),
                 silentSearch: document.getElementById('silentSearch'),
                 enableMultithreading: document.getElementById('enableMultithreading'),
-                battleBoostLevel: document.getElementById('battleBoostLevel')
+                battleBoostLevel: document.getElementById('battleBoostLevel'),
+                apiKeyInput: document.getElementById('apiKeyInput'),
+                autoLoadApi: document.getElementById('autoLoadApi'),
+                rawCloneAttack: document.getElementById('rawCloneAttack'),
+                rawPrecision: document.getElementById('rawPrecision'),
+                rawDodge: document.getElementById('rawDodge'),
+                rawSingleCloneHP: document.getElementById('rawSingleCloneHP')
             };
 
             for (const key in elements) {
                 if (elements[key]) {
                     if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'vipStatus' || 
-                        key === 'silentSearch' || key === 'enableMultithreading' || key === 'battleBoostLevel') {
+                        key === 'silentSearch' || key === 'enableMultithreading' || key === 'battleBoostLevel' || key === 'autoLoadApi' || key === 'rawCloneAttack' || key === 'rawPrecision' || key === 'rawDodge' || key === 'rawSingleCloneHP') { // Add autoLoadApi here
                         localStorage.setItem(key, elements[key].checked || elements[key].value);
                     } else {
                         localStorage.setItem(key, elements[key].value);
@@ -1118,9 +1020,9 @@
             // 计算敌人生命值
             let enemyHP;
             if (level < 150) {
-                enemyHP = Math.floor(1300.0 * level / damageMultiplier);
+                enemyHP = Math.floor(1300.0 * level);
             } else {
-                enemyHP = Math.floor(1300.0 * 1.2 * level / damageMultiplier);
+                enemyHP = Math.floor(1300.0 * 1.2 * level);
             }
 
             document.getElementById('enemyHP').textContent = enemyHP;
@@ -1140,9 +1042,9 @@
             // 计算敌人生命值
             let enemyHP;
             if (level < 150) {
-                enemyHP = Math.floor(1300.0 * level / damageMultiplier);
+                enemyHP = Math.floor(1300.0 * level);
             } else {
-                enemyHP = Math.floor(1300.0 * 1.2 * level / damageMultiplier);
+                enemyHP = Math.floor(1300.0 * 1.2 * level);
             }
             
             // 计算敌人攻击力
@@ -1501,16 +1403,21 @@
             
             if (total !== currentTotal) return 0; // 使用当前的总点数，不再是固定常量
 
+            // 获取战斗提升等级，并计算倍率
+            const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
+            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
+
             const params = {
                 enemyHP: parseFloat(document.getElementById('enemyHP').textContent),
                 enemyAttack: parseFloat(document.getElementById('enemyAttack').textContent),
                 enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                 enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                 cloneCount: parseInt(document.getElementById('cloneCount').value),
-                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B),
-                cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value),
-                clonePrecision: build.C,
-                cloneDodge: build.D,
+                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B) * boostMultiplier,
+                cloneAttack: ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value)) * boostMultiplier * damageMultiplier,
+                clonePrecision: build.C * boostMultiplier,
+                cloneDodge: build.D * boostMultiplier,
                 critChance: parseFloat(document.getElementById('critChance').value) / 100,
                 critDamage: (parseFloat(document.getElementById('critDamage').value) + 130) / 100,
                 reAttackChance: parseFloat(document.getElementById('reAttackChance').value) / 100
@@ -1542,9 +1449,10 @@
             const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
             const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
             const cloneCount = parseInt(document.getElementById('cloneCount').value);
+            const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
 
             const cloneHP = (baseCloneHP + 7 * build.B) * boostMultiplier;
-            const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier;
+            const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier * damageMultiplier;
 
             // 如果不是静默搜索，则更新DOM
             if (!silentSearch) {
@@ -1684,16 +1592,21 @@
                         D: currentBuild.D + dD
                     };
 
+                    // 获取战斗提升等级，并计算倍率
+                    const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
+                    const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                    const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
+
                     const params = {
                         enemyHP: parseFloat(document.getElementById('enemyHP').textContent),
                         enemyAttack: parseFloat(document.getElementById('enemyAttack').textContent),
                         enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                         enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                         cloneCount: parseInt(document.getElementById('cloneCount').value),
-                        cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B),
-                        cloneAttack: (parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value),
-                        clonePrecision: newBuild.C,
-                        cloneDodge: newBuild.D,
+                        cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B) * boostMultiplier,
+                        cloneAttack: ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value)) * boostMultiplier * damageMultiplier,
+                        clonePrecision: newBuild.C * boostMultiplier,
+                        cloneDodge: newBuild.D * boostMultiplier,
                         critChance: parseFloat(document.getElementById('critChance').value) / 100,
                         critDamage: (parseFloat(document.getElementById('critDamage').value) + 130) / 100,
                         reAttackChance: parseFloat(document.getElementById('reAttackChance').value) / 100
@@ -1755,8 +1668,6 @@
             const STEP_SIZE = 0.1;
             let totalSum = 0;
             
-            let debugValues = []; // 保持调试功能
-            
             for (
                 let current = Number((start + STEP_SIZE).toFixed(1)); // 从 start + 0.1 开始
                 current <= end;                                       // 直到达到 end
@@ -1764,15 +1675,6 @@
             ) {
                 const value = calculateExponentialValue(current);
                 totalSum += value;
-                if (window.debugMode) { // 保持调试输出
-                   debugValues.push({current, value});
-                }
-            }
-            
-            if (window.debugMode) {
-                console.log("计算区间: ", start, "到", end);
-                console.log("计算步骤: ", debugValues);
-                console.log("总成本: ", totalSum);
             }
             
             return totalSum;
@@ -1793,8 +1695,6 @@
             
             let curveData = [];
             
-            // 是否启用调试模式(控制台输出详细计算步骤)
-            window.debugMode = document.getElementById('debugMode').checked;
             
             // 对于暴击伤害，不需要减去基础值130%，因为输入框已经是纯增益值
             let actualValue = currentValue;
@@ -1805,19 +1705,10 @@
             // 增加1.0%的成本
             const cost10 = sumExponentialRange(actualValue, actualValue + 1.0) * cloneCount;
             
-            // 游戏常见区间的成本计算验证
-            let specialCases = [
             
-            ];
             
-            let verificationHTML = '';
             
-            for (let testCase of specialCases) {
-                const calculatedCost = sumExponentialRange(testCase.from, testCase.to) * cloneCount;
-                verificationHTML += `<tr><td>${testCase.from}%→${testCase.to}%</td><td>${calculatedCost.toFixed(0)}</td><td>${testCase.expectedCost}</td></tr>`;
-            }
             
-            verificationHTML += '</table>';
             
             // 计算从当前值开始，每+1%的成本，以及累计成本
             let totalCumulativeCost = 0;
@@ -1867,8 +1758,6 @@
             const clonePrice = parseFloat(document.getElementById('clonePrice').value) || 100000000;
             const simCount = 360000
             
-            // 开启调试模式查看计算过程
-            window.debugMode = document.getElementById('debugMode').checked;
             
             document.getElementById('result').innerHTML = '正在计算各项升级收益比较，请稍候...';
             
@@ -1877,11 +1766,7 @@
             const currentCritDamage = parseFloat(document.getElementById('critDamage').value) || 0;
             const currentReAttackChance = parseFloat(document.getElementById('reAttackChance').value) || 0;
             
-            console.log("--- compareUpgrades Debug --- ");
-            console.log("读取到的克隆人数量:", cloneCount);
-            console.log("读取到的暴击几率:", currentCritChance);
-            console.log("读取到的暴击伤害:", currentCritDamage);
-            console.log("读取到的双重射击:", currentReAttackChance);
+            
             
             // 先保存当前输入框的值
             const critChanceOriginal = document.getElementById('critChance').value;
@@ -1900,9 +1785,7 @@
             };
             const reAttackChanceUpgrade = getSingleUpgrade(currentReAttackChance, cloneCount);
             
-            console.log("计算出的暴击几率升级成本 (已乘克隆数):", critChanceUpgrade.cost);
-            console.log("计算出的暴击伤害升级成本 (已乘克隆数):", critDamageUpgrade.cost);
-            console.log("计算出的双重射击升级成本 (已乘克隆数):", reAttackChanceUpgrade.cost);
+            
             
             // 计算新增克隆人
             const newCloneCount = cloneCount + 1;
@@ -2020,10 +1903,8 @@
             
             resultHTML += `<tr><td>暴击伤害</td><td>${currentCritDamage.toFixed(1)}%</td><td>${critDamageUpgrade.maxValue.toFixed(1)}%</td><td>${critDamageUpgrade.cost.toFixed(0)}</td>
                            <td>${(critDamageResult.newWinRate - critDamageResult.currentWinRate).toFixed(2)}%</td><td>${critDamageROI.toFixed(4)}</td></tr>`;
-            
             resultHTML += `<tr><td>双重射击</td><td>${currentReAttackChance.toFixed(1)}%</td><td>${reAttackChanceUpgrade.maxValue.toFixed(1)}%</td><td>${reAttackChanceUpgrade.cost.toFixed(0)}</td>
                            <td>${(reAttackChanceResult.newWinRate - reAttackChanceResult.currentWinRate).toFixed(2)}%</td><td>${reAttackChanceROI.toFixed(4)}</td></tr>`;
-            
             resultHTML += `<tr><td>新增克隆人</td><td>${cloneCount}</td><td>${newCloneCount}</td><td>${cloneCost.toFixed(0)}</td>
                            <td>${(newCloneWinRate - baseWinRate).toFixed(2)}%</td><td>${newCloneROI.toFixed(4)}</td></tr>`;
             
@@ -2244,9 +2125,10 @@
                     // 获取战斗提升等级，并计算倍率
                     const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
                     const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                    const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0; // Retrieve damageMultiplier here
 
                     const cloneHP = (baseCloneHP + 7 * build.B) * boostMultiplier;
-                    const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier;
+                    const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier * damageMultiplier;
                     const params = {
                         enemyHP: enemyHP,
                         enemyAttack: enemyAttack,
@@ -2391,9 +2273,10 @@
                 // 获取战斗提升等级，并计算倍率
                 const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
                 const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0; // Retrieve damageMultiplier here
 
                 const cloneHP = (baseCloneHP + 7 * newBuild.B) * boostMultiplier;
-                const cloneAttack = ((baseCloneAttack + 7 * newBuild.A) * cloneCount) * boostMultiplier;
+                const cloneAttack = ((baseCloneAttack + 7 * newBuild.A) * cloneCount) * boostMultiplier * damageMultiplier;
                 
                 const params = {
                     enemyHP: enemyHP,
