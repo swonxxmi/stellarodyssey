@@ -4,7 +4,6 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>战斗与加点模拟器</title>
-    <script src="https://cdn.jsdelivr.net/npm/workerpool@9.2.0/dist/workerpool.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -471,6 +470,19 @@
     </div>
 
     <script>
+        const WORKERPOOL_CDN_URL = "https://cdn.jsdelivr.net/npm/workerpool@9.2.0/dist/workerpool.min.js";
+        const WORKERPOOL_PROXY_URL = "https://s4.zstatic.net/npm/workerpool@9.2.0/dist/workerpool.min.js";
+
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = () => resolve(true);
+                script.onerror = () => reject(new Error(`Failed to load script from ${url}`));
+                document.body.appendChild(script);
+            });
+        }
+
         // 在script开始部分添加全局变量
         let cloneStatsCache = {}; // 缓存克隆人统计数据
         let enemyBonuses = []; // 敌人弱点
@@ -479,8 +491,8 @@
         let baseCloneAttackValue = 0; // 武器基础值
         let baseCloneHPValue = 0; // 护盾基础值
         let currentEnemy = ""; // 当前敌人类型
-        let pool = workerpool.pool(); // 初始化线程池
         let multithreadingData = {}; // 多线程处理数据
+        let pool = null; // 初始化线程池为null
 
         // 添加敌人弱点映射表
         const enemyWeaknessMap = {
@@ -525,7 +537,26 @@
         };
 
         // 页面加载时恢复输入值
-        window.onload = function() {
+        window.onload = async function() {
+            try {
+                await loadScript(WORKERPOOL_CDN_URL);
+                if (typeof workerpool === 'undefined') {
+                    console.warn("Workerpool CDN failed, trying proxy...");
+                    await loadScript(WORKERPOOL_PROXY_URL);
+                }
+
+                if (typeof workerpool !== 'undefined') {
+                    pool = workerpool.pool();
+                } else {
+                    console.error("Workerpool library not loaded from CDN or proxy. Multithreading will be disabled.");
+                    document.getElementById('enableMultithreading').checked = false;
+                    document.getElementById('enableMultithreading').disabled = true;
+                }
+            } catch (e) {
+                console.error("Error loading workerpool library:", e);
+                document.getElementById('enableMultithreading').checked = false;
+                document.getElementById('enableMultithreading').disabled = true;
+            }
             const elements = {
                 enemyLevel: document.getElementById('enemyLevel'),
                 damageMultiplier: document.getElementById('damageMultiplier'),
@@ -794,6 +825,10 @@
             if (player.spacestation && player.spacestation.battling_boost !== undefined) {
                 document.getElementById('battleBoostLevel').value = player.spacestation.battling_boost;
                 message += `战斗提升等级：${player.spacestation.battling_boost}\n`;
+            } else {
+                // 如果没有空间站战斗提升等级信息，则重置为0
+                document.getElementById('battleBoostLevel').value = 0;
+                message += `战斗提升等级：0 (未从API获取到)\n`;
             }
 
             // 如果没有找到改装相关信息，则将模组伤害加成设为1
@@ -2342,4 +2377,6 @@
           if(pool) pool.terminate();
         });
     </script>
+</body>
+</html>
 
