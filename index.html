@@ -1,474 +1,109 @@
 <!DOCTYPE html>
-<!-- saved from url=(0038)https://stellarodyssey-two.vercel.app/ -->
-<html lang="zh"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>战斗与加点模拟器</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4a6baf;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #17a2b8;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40;
-            --border-color: #dee2e6;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-            --card-bg: #ffffff;
-            --body-bg: #f5f7fa;
+  --primary: #4a6baf; --secondary: #6c757d; --success: #28a745; --danger: #dc3545;
+  --border: #dee2e6; --shadow: rgba(0,0,0,0.1); --card: #fff; --body: #f5f7fa;
         }
-        body {
-            font-family: 'Roboto', Arial, sans-serif;
-            margin: 0;
-            padding: 18px;
-            background-color: var(--body-bg);
-            color: #333;
-            line-height: 1.5;
-            font-size: 13px;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 18px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        .panel {
-            flex: 1;
-            min-width: 298px;
-            background-color: var(--card-bg);
-            border-radius: 6px;
-            box-shadow: 0 2px 8px var(--shadow-color);
-            padding: 18px;
-            margin-bottom: 18px;
-        }
-        h2 {
-            color: var(--primary-color);
-            margin-top: 0;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 1.4rem;
-        }
-        h3 {
-            color: var(--secondary-color);
-            font-size: 1.1rem;
-            margin: 13px 0 8px;
-        }
-        .form-group {
-            margin-bottom: 13px;
-            display: flex;
-            align-items: center;
-        }
-        label {
-            display: inline-block;
-            width: 148px;
-            font-weight: 500;
-            color: var(--secondary-color);
-            font-size: 13px;
-        }
-        input[type="number"], input[type="text"] {
-            width: 98px;
-            padding: 6px 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            font-size: 13px;
-            transition: border-color 0.3s;
-        }
-        input[type="number"]:focus, input[type="text"]:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(74, 107, 175, 0.2);
-        }
-        input[type="checkbox"] {
-            margin-right: 3px;
-        }
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 13px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: background-color 0.3s, transform 0.2s;
-            margin-right: 8px;
-            margin-bottom: 8px;
-        }
-        button:hover {
-            background-color: #3a5a9f;
-            transform: translateY(-1px);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        button.secondary {
-            background-color: var(--secondary-color);
-        }
-        button.secondary:hover {
-            background-color: #5a6268;
-        }
-        button.success {
-            background-color: var(--success-color);
-        }
-        button.success:hover {
-            background-color: #218838;
-        }
-        #result {
-            margin-top: 18px;
-            padding: 13px;
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            white-space: pre-wrap;
-            background-color: white;
-            max-height: 500px;
-            overflow-y: auto;
-            font-size: 13px;
-        }
-        #progressContainer {
-            margin-top: 13px;
-            display: none;
-            width: 100%;
-        }
-        progress {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-        }
-        progress::-webkit-progress-bar {
-            background-color: #e9ecef;
-            border-radius: 4px;
-        }
-        progress::-webkit-progress-value {
-            background-color: var(--primary-color);
-            border-radius: 4px;
-        }
-        progress::-moz-progress-bar {
-            background-color: var(--primary-color);
-            border-radius: 4px;
-        }
-        #progressText {
-            display: block;
-            text-align: center;
-            margin-top: 3px;
-            font-size: 11px;
-            color: var(--secondary-color);
-        }
-        #totalPointsWarning {
-            color: var(--danger-color);
-            display: none;
-            margin-left: 8px;
-            font-size: 13px;
-        }
-        table {
-            border-collapse: collapse;
-            margin-top: 18px;
-            width: 100%;
-            box-shadow: 0 1px 3px var(--shadow-color);
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            font-size: 13px;
-        }
-        th {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 500;
-        }
-        tr:nth-child(even) {
-            background-color: rgba(0, 0, 0, 0.02);
-        }
-        tr:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
+body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 18px; background: var(--body); color: #333; font-size: 13px; }
+.container { display: flex; flex-wrap: wrap; gap: 18px; max-width: 1400px; margin: 0 auto; }
+.panel { background: var(--card); border-radius: 6px; box-shadow: 0 2px 8px var(--shadow); padding: 18px; margin-bottom: 18px; width: 48%; box-sizing: border-box; }
+h2 { color: var(--primary); margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: 1.4rem; }
+h3 { color: var(--secondary); font-size: 1.1rem; margin: 13px 0 8px; }
+.form-group { margin-bottom: 13px; display: flex; align-items: center; }
+label { width: 148px; font-weight: 500; color: var(--secondary); font-size: 13px; }
+input[type="number"],input[type="text"] { width: 98px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; }
+input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(74,107,175,0.2); }
+input[type="checkbox"] { margin-right: 3px; }
+button { background: var(--primary); color: #fff; border: none; padding: 8px 13px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.3s,transform 0.2s; margin-right: 8px; margin-bottom: 8px; }
+button:hover { background: #3a5a9f; transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+button.secondary { background: var(--secondary); }
+button.secondary:hover { background: #5a6268; }
+button.success { background: var(--success); }
+button.success:hover { background: #218838; }
+#result { margin-top: 18px; padding: 20px; border: 1px solid var(--border); border-radius: 3px; white-space: pre-wrap; background: #fff; min-height: 30px; overflow-y: auto; font-size: 14px; display: flex; flex-direction: column; align-items: center; }
+#progressContainer { margin-top: 13px; display: none; width: 100%; }
+progress { width: 100%; height: 8px; border-radius: 4px; }
+progress::-webkit-progress-bar { background: #e9ecef; border-radius: 4px; }
+progress::-webkit-progress-value { background: var(--primary); border-radius: 4px; }
+progress::-moz-progress-bar { background: var(--primary); border-radius: 4px; }
+#progressText { display: block; text-align: center; margin-top: 3px; font-size: 11px; color: var(--secondary); }
+#totalPointsWarning { color: var(--danger); display: none; margin-left: 8px; font-size: 13px; }
+table { border-collapse: collapse; margin-top: 18px; width: 100%; box-shadow: 0 1px 3px var(--shadow); }
+th,td { padding: 12px; text-align: center; border: 1px solid var(--border); font-size: 14px; }
+th { background: var(--primary); color: #fff; font-weight: 500; }
+tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+tr:hover { background: rgba(0,0,0,0.05); }
         #analysisPanel { display: block; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: var(--card-bg);
-            margin: 18px;
-            padding: 23px;
-            border-radius: 6px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 5px 13px rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-        .close {
-            color: var(--secondary-color);
-            position: absolute;
-            top: 13px;
-            right: 13px;
-            font-size: 27px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        .close:hover {
-            color: var(--danger-color);
-        }
-        #jsonInput {
-            width: 100%;
-            height: 198px;
-            margin-bottom: 13px;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 13px;
-        }
-        .stat-value {
-            font-weight: bold;
-            color: var(--primary-color);
-            min-width: 78px;
-            display: inline-block;
-        }
-        .tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: help;
-        }
-        .tooltip .tooltiptext {
-            visibility: hidden;
-            width: 198px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 5px;
-            padding: 3px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 11px;
-            font-weight: normal;
-        }
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
-            opacity: 1;
-        }
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            .panel {
-                width: 100%;
-            }
-            .form-group {
-                flex-wrap: wrap;
-            }
-            label {
-                width: 100%;
-                margin-bottom: 3px;
-            }
-        }
+.tooltip { position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext { visibility: hidden; width: 198px; background: #333; color: #fff; text-align: center; border-radius: 5px; padding: 3px; position: absolute; z-index: 1; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 11px; font-weight: normal; }
+.tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+@media (max-width: 768px) { .container { flex-direction: column; } .panel { width: 100%; min-width: unset; } .form-group { flex-wrap: wrap; } label { width: 100%; margin-bottom: 3px; } }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="panel">
             <h2>克隆人装备与属性</h2>
-            <div class="form-group">
-                <label>数量:</label>
-                <input type="number" id="cloneCount" value="1" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>武器伤害:</label>
-                <input type="number" id="baseCloneAttack" value="70" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>护盾防御:</label>
-                <input type="number" id="baseCloneHP" value="800" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>暴击几率 (%):</label>
-                <input type="number" id="critChance" value="0" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>暴击伤害 (%):</label>
-                <input type="number" id="critDamage" value="0" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>双重射击 (%):</label>
-                <input type="number" id="reAttackChance" value="0" step="0.1">
-            </div>
-
+    <div class="form-group"><label>数量:</label><input type="number" id="cloneCount" value="1" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>武器伤害:</label><input type="number" id="baseCloneAttack" value="70" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>护盾防御:</label><input type="number" id="baseCloneHP" value="800" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>暴击几率 (%):</label><input type="number" id="critChance" value="0" step="0.1"></div>
+    <div class="form-group"><label>暴击伤害 (%):</label><input type="number" id="critDamage" value="0" step="0.1"></div>
+    <div class="form-group"><label>双重射击 (%):</label><input type="number" id="reAttackChance" value="0" step="0.1"></div>
             <h2>统计数据分配</h2>
-            <div class="form-group">
-                <label>能量加点 (A):</label>
-                <input type="number" id="addAttack" value="10" min="0" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>精准加点 (C):</label>
-                <input type="number" id="addPrecision" value="10" min="0" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>闪避加点 (D):</label>
-                <input type="number" id="addDodge" value="10" min="0" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>装甲加点 (B):</label>
-                <input type="number" id="addArmor" value="10" min="0" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>加点总和:</label>
-                <span id="totalPoints" class="stat-value">320</span>
-                <span id="totalPointsWarning" style="display: none;">加点总和发生变化！当前总点数：<span id="totalPointsValue">320</span></span>
-            </div>
-           
-            <div class="form-group" style="margin-top: 15px;">
-                <label>API Key:</label>
-                <input type="text" id="apiKeyInput" placeholder="在此输入您的sodyssey-api-key" oninput="saveToLocalStorage()">
-                <input type="checkbox" id="autoLoadApi" onchange="saveToLocalStorage()">
-                <label for="autoLoadApi">自动加载API</label>
-            </div>
+    <div class="form-group"><label>能量加点 (A):</label><input type="number" id="addAttack" value="10" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>精准加点 (C):</label><input type="number" id="addPrecision" value="10" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>闪避加点 (D):</label><input type="number" id="addDodge" value="10" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>装甲加点 (B):</label><input type="number" id="addArmor" value="10" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>加点总和:</label><span id="totalPoints" class="stat-value">320</span><span id="totalPointsWarning" style="display: none;">加点总和发生变化！当前总点数：<span id="totalPointsValue">320</span></span></div>
+    <div class="form-group"><label>API Key:</label><input type="text" id="apiKeyInput" placeholder="在此输入您的sodyssey-api-key" oninput="saveToLocalStorage()"><input type="checkbox" id="autoLoadApi" onchange="saveToLocalStorage()" style="margin-left: 10px;"><label for="autoLoadApi" style="width: auto;">自动加载API</label></div>
             <button type="button" onclick="importFromApi()" class="primary">从API导入数据</button>
-
             <h2>克隆人综合统计数据</h2>
-            <div class="form-group">
-                <label>玩家生命值:</label>
-                <span id="cloneHP" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawSingleCloneHP"></span>)</span>
+    <div class="form-group"><label>玩家生命值:</label><span id="cloneHP" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawSingleCloneHP"></span>)</span></div>
+    <div class="form-group"><label>玩家伤害:</label><span id="cloneAttack" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawCloneAttack"></span>)</span></div>
+    <div class="form-group"><label>精准:</label><span id="clonePrecision" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawPrecision"></span>)</span></div>
+    <div class="form-group"><label>闪避:</label><span id="cloneDodge" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawDodge"></span>)</span></div>
+    <div class="form-group"><label>静默搜索:</label><input type="checkbox" id="silentSearch" checked><span class="tooltip">(不实时更新属性)<span class="tooltiptext">开启后寻找加点时不会实时更新界面显示</span></span></div>
             </div>
-            <div class="form-group">
-                <label>玩家伤害:</label>
-                <span id="cloneAttack" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawCloneAttack"></span>)</span>
-            </div>
-            <div class="form-group">
-                <label>精准:</label>
-                <span id="clonePrecision" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawPrecision"></span>)</span>
-            </div>
-            <div class="form-group">
-                <label>闪避:</label>
-                <span id="cloneDodge" class="stat-value"></span> <span class="stat-info">(原始: <span id="rawDodge"></span>)</span>
-            </div>
-            <div class="form-group">
-                <label>会员状态:</label>
-                <input type="checkbox" id="vipStatus" onchange="updateCloneStats()">
-                <span class="tooltip">(会员无任何加成)<span class="tooltiptext">当前版本中会员状态不影响战斗属性</span></span>
-            </div>
-            <div class="form-group">
-                <label>静默搜索:</label>
-                <input type="checkbox" id="silentSearch" checked>
-                <span class="tooltip">(不实时更新属性)<span class="tooltiptext">开启后寻找加点时不会实时更新界面显示</span></span>
-            </div>
-        </div>
-
         <div class="panel">
             <h2>敌人参数</h2>
-            <div class="form-group">
-                <label>敌人等级:</label>
-                <input type="number" id="enemyLevel" value="1" min="1" oninput="updateEnemyStats()">
-            </div>
-            <div class="form-group">
-                <label>模组伤害加成:</label>
-                <input type="number" id="damageMultiplier" value="1" step="0.15" oninput="updateEnemyStats()">
-            </div>
-            <div class="form-group">
-                <label>战斗提升等级:</label>
-                <input type="number" id="battleBoostLevel" value="0" min="0" oninput="updateCloneStats()">
-            </div>
-            <div class="form-group">
-                <label>生命值:</label>
-                <span id="enemyHP" class="stat-value">42500</span>
-            </div>
-            <div class="form-group">
-                <label>攻击力:</label>
-                <span id="enemyAttack" class="stat-value">595</span>
-            </div>
-            <div class="form-group">
-                <label>精准:</label>
-                <span id="enemyPrecision" class="stat-value">170</span>
-            </div>
-            <div class="form-group">
-                <label>闪避:</label>
-                <span id="enemyDodge" class="stat-value">170</span>
-            </div>
-
+    <div class="form-group"><label>敌人等级:</label><input type="number" id="enemyLevel" value="1" min="1" oninput="updateEnemyStats()"></div>
+    <div class="form-group"><label>模组伤害加成:</label><input type="number" id="damageMultiplier" value="1" step="0.15" oninput="updateEnemyStats()"></div>
+    <div class="form-group"><label>战斗提升等级:</label><input type="number" id="battleBoostLevel" value="0" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>生命值:</label><span id="enemyHP" class="stat-value">42500</span></div>
+    <div class="form-group"><label>攻击力:</label><span id="enemyAttack" class="stat-value">595</span></div>
+    <div class="form-group"><label>精准:</label><span id="enemyPrecision" class="stat-value">170</span></div>
+    <div class="form-group"><label>闪避:</label><span id="enemyDodge" class="stat-value">170</span></div>
             <h2>模拟设置</h2>
-            <div class="form-group">
-                <label>批量模拟次数:</label>
-                <input type="number" id="simCount" value="36000" min="1">
-            </div>
-            <div class="form-group">
-                <label>修改范围:</label>
-                <input type="number" id="modifyRange" value="24" min="1">
-            </div>
-            <div class="form-group">
-                <label>步长:</label>
-                <input type="number" id="stepSize" value="3" min="1">
-            </div>
-            <div class="form-group">
-                <label>新增加点数:</label>
-                <input type="number" id="additionalPoints" value="5" min="1">
-            </div>
-            <div class="form-group">
-                <label>收起属性升级:</label>
-                <input type="checkbox" id="hideAnalysis" onchange="toggleAnalysisPanel()" checked>
-            </div>
-            <div class="form-group">
-                <label>自动赋予加点:</label>
-                <input type="checkbox" id="dontApplyBuild" checked>
-            </div>
-
+    <div class="form-group"><label>批量模拟次数:</label><input type="number" id="simCount" value="36000" min="1"></div>
+    <div class="form-group"><label>修改范围:</label><input type="number" id="modifyRange" value="24" min="1"></div>
+    <div class="form-group"><label>步长:</label><input type="number" id="stepSize" value="3" min="1"></div>
+    <div class="form-group"><label>新增加点数:</label><input type="number" id="additionalPoints" value="5" min="1"></div>
+    <div class="form-group"><label>收起属性升级:</label><input type="checkbox" id="hideAnalysis" onchange="toggleAnalysisPanel()" checked></div>
+    <div class="form-group"><label>自动赋予加点:</label><input type="checkbox" id="dontApplyBuild" checked></div>
+    <div class="form-group" style="margin-top: 0;"><label>启用多线程:</label><input type="checkbox" id="enableMultithreading" checked><span class="tooltip">(提高模拟速度)<span class="tooltiptext">开启后可显著提高搜索速度</span></span></div>
             <h2>收益分析</h2>
             <div id="analysisPanel" style="display: none;">
-                <div class="form-group">
-                    <label>新增克隆人成本:</label>
-                    <input type="number" id="clonePrice" value="100000000">
-                </div>
+      <div class="form-group"><label>新增克隆人成本:</label><input type="text" id="clonePrice" oninput="throttleFormatClonePrice()" onblur="formatClonePrice()"></div>
                 <button type="button" onclick="compareUpgrades()" class="success">属性投资分析</button>
-                
-                <div class="form-group" style="margin-top: 10px;">
-                    <label>查看属性升级曲线:</label>
-                    <select id="attributeSelect" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
-                        <option value="critChance">暴击几率</option>
-                        <option value="critDamage">暴击伤害</option>
-                        <option value="reAttackChance">双重射击</option>
-                    </select>
-                    <button type="button" onclick="showUpgradeCurve()" class="secondary">显示升级曲线</button>
-                    <label><input type="checkbox" id="debugMode"> 开启调试模式</label>
-                </div>
             </div>
-
-            <div class="form-group">
-                <label>启用多线程:</label>
-                <input type="checkbox" id="enableMultithreading" checked>
-                <span class="tooltip">(提高模拟速度)<span class="tooltiptext">开启后可显著提高搜索速度</span></span>
-            </div>
-
             <div style="margin-top: 20px;">
                 <button type="button" onclick="simulateBattle()" class="primary">战斗过程演示</button>
                 <button type="button" onclick="batchSimulate()" class="primary">收益最优等级</button>
                 <button type="button" onclick="findBestBuild()" class="success">范围加点优化</button>
                 <button type="button" onclick="findBestAdditionalPoints()" class="success">增量加点优化</button>
             </div>
-
-            <div id="progressContainer"> 
-                <progress id="progressBar" value="0" max="100"></progress>
-                <span id="progressText">0%</span>
-            </div>
+    <div id="progressContainer"><progress id="progressBar" value="0" max="100"></progress><span id="progressText">0%</span></div>
             <div id="result"></div>
         </div>
     </div>
-
     <script>
         const WORKERPOOL_CDN_URL = "https://cdn.jsdelivr.net/npm/workerpool@9.2.0/dist/workerpool.min.js";
         const WORKERPOOL_PROXY_URL = "https://s4.zstatic.net/npm/workerpool@9.2.0/dist/workerpool.min.js";
@@ -481,6 +116,41 @@
                 script.onerror = () => reject(new Error(`Failed to load script from ${url}`));
                 document.body.appendChild(script);
             });
+        }
+
+        // Helper functions for currency parsing and formatting
+        function parseCurrencyInput(inputString) {
+            if (!inputString) return 0;
+            const cleanedInput = inputString.toUpperCase().trim();
+            const numericValue = parseFloat(cleanedInput);
+
+            if (isNaN(numericValue)) return 0;
+
+            if (cleanedInput.endsWith('K')) {
+                return numericValue * 1000;
+            } else if (cleanedInput.endsWith('M')) {
+                return numericValue * 1000000;
+            } else if (cleanedInput.endsWith('B')) {
+                return numericValue * 1000000000;
+            } else if (cleanedInput.endsWith('T')) {
+                return numericValue * 1000000000000;
+            } else {
+                return numericValue;
+            }
+        }
+
+        function formatCurrencyOutput(num) {
+            if (num >= 1000000000000) {
+                return (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
+            } else if (num >= 1000000000) {
+                return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+            } else if (num >= 1000000) {
+                return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+            } else {
+                return num.toFixed(0);
+            }
         }
 
         // 在script开始部分添加全局变量
@@ -583,7 +253,6 @@
                 result: document.getElementById('result'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
                 dontApplyBuild: document.getElementById('dontApplyBuild'),
-                vipStatus: document.getElementById('vipStatus'),
                 silentSearch: document.getElementById('silentSearch'),
                 enableMultithreading: document.getElementById('enableMultithreading'),
                 battleBoostLevel: document.getElementById('battleBoostLevel'),
@@ -592,13 +261,17 @@
                 rawCloneAttack: document.getElementById('rawCloneAttack'),
                 rawPrecision: document.getElementById('rawPrecision'),
                 rawDodge: document.getElementById('rawDodge'),
-                rawSingleCloneHP: document.getElementById('rawSingleCloneHP')
+                rawSingleCloneHP: document.getElementById('rawSingleCloneHP'),
+                clonePrice: document.getElementById('clonePrice') // Add clonePrice here
             };
 
             // 恢复输入值
             for (const key in elements) {
-                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'vipStatus' && key !== 'silentSearch' && key !== 'enableMultithreading' && key !== 'battleBoostLevel' && key !== 'autoLoadApi' && key !== 'rawCloneAttack' && key !== 'rawPrecision' && key !== 'rawDodge' && key !== 'rawSingleCloneHP') {
+                if (elements[key] && key !== 'hideAnalysis' && key !== 'dontApplyBuild' && key !== 'silentSearch' && key !== 'enableMultithreading' && key !== 'battleBoostLevel' && key !== 'autoLoadApi' && key !== 'rawCloneAttack' && key !== 'rawPrecision' && key !== 'rawDodge' && key !== 'rawSingleCloneHP' && key !== 'clonePrice') {
                     elements[key].value = localStorage.getItem(key) || elements[key].value;
+                } else if (key === 'clonePrice') { // Special handling for clonePrice
+                    const storedValue = localStorage.getItem(key);
+                    elements[key].value = storedValue ? formatCurrencyOutput(parseCurrencyInput(storedValue)) : '100M'; // Default to 100M
                 }
             }
             
@@ -609,9 +282,6 @@
             const dontApplyBuild = localStorage.getItem('dontApplyBuild');
             elements.dontApplyBuild.checked = dontApplyBuild !== null ? dontApplyBuild === 'true' : true;
 
-            const vipStatus = localStorage.getItem('vipStatus');
-            elements.vipStatus.checked = vipStatus !== null ? vipStatus === 'true' : false;
-            
             const silentSearch = localStorage.getItem('silentSearch');
             elements.silentSearch.checked = silentSearch !== null ? silentSearch === 'true' : true;
             
@@ -682,19 +352,19 @@
             currentEnemy = "";
             
             // 处理会员状态
-            if (player.premium !== undefined) {
-                // 检查是否是 API 返回的 { active: true, dateEnd: ... } 结构
-                if (typeof player.premium === 'object' && player.premium.active !== undefined) {
-                    document.getElementById('vipStatus').checked = player.premium.active;
-                    message += `会员状态：${player.premium.active ? '已激活' : '未激活'}\n`;
-                    if (player.premium.dateEnd) {
-                        message += `（有效期至：${new Date(player.premium.dateEnd * 1000).toLocaleDateString()}）\n`;
-                    }
-                } else { // 假设是直接的布尔值
-                    document.getElementById('vipStatus').checked = player.premium;
-                    message += `会员状态：${player.premium ? '已激活' : '未激活'}\n`;
-                }
-            }
+            // if (player.premium !== undefined) {
+            //     // 检查是否是 API 返回的 { active: true, dateEnd: ... } 结构
+            //     if (typeof player.premium === 'object' && player.premium.active !== undefined) {
+            //         document.getElementById('vipStatus').checked = player.premium.active;
+            //         message += `会员状态：${player.premium.active ? '已激活' : '未激活'}\n`;
+            //         if (player.premium.dateEnd) {
+            //             message += `（有效期至：${new Date(player.premium.dateEnd * 1000).toLocaleDateString()}）\n`;
+            //         }
+            //     } else { // 假设是直接的布尔值
+            //         document.getElementById('vipStatus').checked = player.premium;
+            //         message += `会员状态：${player.premium ? '已激活' : '未激活'}\n`;
+            //     }
+            // }
             
             // 导入克隆人数据 - 计算所有克隆人的平均属性
             if (player.clones && player.clones.length > 0) {
@@ -967,8 +637,8 @@
             console.log(`updateCloneStats: Cache: cloneHP=${cloneStatsCache.cloneHP.toFixed(2)}, cloneAttack=${cloneStatsCache.cloneAttack.toFixed(2)}, damageMultiplier=${damageMultiplier}`);
 
             // Update DOM (apply floor and format display)
-            document.getElementById('cloneHP').textContent = Math.floor(totalCloneHPForDisplay).toFixed(1); // Total HP for all clones for UI
-            document.getElementById('rawSingleCloneHP').textContent = Math.floor(rawSingleCloneHP).toFixed(1); // Raw single clone HP for UI
+            document.getElementById('cloneHP').textContent = Math.floor(totalCloneHPForDisplay); // Total HP for all clones for UI
+            document.getElementById('rawSingleCloneHP').textContent = Math.floor(rawSingleCloneHP); // Raw single clone HP for UI
 
             document.getElementById('cloneAttack').textContent = Math.floor(totalCloneAttackForSimulation).toFixed(0); // Total attack for UI
             document.getElementById('rawCloneAttack').textContent = Math.floor(rawSingleCloneAttack * cloneCount).toFixed(0); // Raw total attack for UI
@@ -979,7 +649,26 @@
             document.getElementById('cloneDodge').textContent = Math.floor(calculatedCloneDodge).toFixed(0); // Boosted dodge for UI
             document.getElementById('rawDodge').textContent = D; // Raw addDodge value for UI
 
+            // 新增暴击伤害向下取整显示
+            document.getElementById('critDamage').value = Math.floor(parseFloat(document.getElementById('critDamage').value));
+
         }, 100); // 每100毫秒更新一次
+
+        // Debounce timer for clonePrice input
+        let clonePriceDebounceTimer;
+
+        function formatClonePrice() {
+            const clonePriceInput = document.getElementById('clonePrice');
+            if (clonePriceInput) {
+                const numericValue = parseCurrencyInput(clonePriceInput.value);
+                clonePriceInput.value = formatCurrencyOutput(numericValue);
+            }
+        }
+
+        function throttleFormatClonePrice() {
+            clearTimeout(clonePriceDebounceTimer);
+            clonePriceDebounceTimer = setTimeout(formatClonePrice, 3000); // 3秒后执行格式化
+        }
 
         // 在输入时保存数据
         document.querySelectorAll('input').forEach(input => {
@@ -1006,7 +695,6 @@
                 additionalPoints: document.getElementById('additionalPoints'),
                 hideAnalysis: document.getElementById('hideAnalysis'),
                 dontApplyBuild: document.getElementById('dontApplyBuild'),
-                vipStatus: document.getElementById('vipStatus'),
                 silentSearch: document.getElementById('silentSearch'),
                 enableMultithreading: document.getElementById('enableMultithreading'),
                 battleBoostLevel: document.getElementById('battleBoostLevel'),
@@ -1015,14 +703,16 @@
                 rawCloneAttack: document.getElementById('rawCloneAttack'),
                 rawPrecision: document.getElementById('rawPrecision'),
                 rawDodge: document.getElementById('rawDodge'),
-                rawSingleCloneHP: document.getElementById('rawSingleCloneHP')
+                rawSingleCloneHP: document.getElementById('rawSingleCloneHP'),
+                clonePrice: document.getElementById('clonePrice') // Add clonePrice here
             };
 
             for (const key in elements) {
                 if (elements[key]) {
-                    if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'vipStatus' || 
-                        key === 'silentSearch' || key === 'enableMultithreading' || key === 'battleBoostLevel' || key === 'autoLoadApi' || key === 'rawCloneAttack' || key === 'rawPrecision' || key === 'rawDodge' || key === 'rawSingleCloneHP') { // Add autoLoadApi here
+                    if (key === 'hideAnalysis' || key === 'dontApplyBuild' || key === 'silentSearch' || key === 'enableMultithreading' || key === 'battleBoostLevel' || key === 'autoLoadApi' || key === 'rawCloneAttack' || key === 'rawPrecision' || key === 'rawDodge' || key === 'rawSingleCloneHP') {
                         localStorage.setItem(key, elements[key].checked || elements[key].value);
+                    } else if (key === 'clonePrice') { // Special handling for clonePrice
+                        localStorage.setItem(key, parseCurrencyInput(elements[key].value));
                     } else {
                         localStorage.setItem(key, elements[key].value);
                     }
@@ -1170,8 +860,8 @@
                             if (hp > 0) {
                                 const hitChance = enemyPrecision / (enemyPrecision + cloneDodge);
                                 if (Math.random() < hitChance) {
-                                    clones[index] -= enemyAttack;
-                                    if (log) logText += \`克隆人 \${index + 1} 受到 \${enemyAttack} 伤害，剩余生命值: \${clones[index] > 0 ? clones[index] : 0}\\n\`;
+                                    clones[index] = Math.max(0, Math.floor(clones[index] - Math.floor(enemyAttack)));
+                                    if (log) logText += \`克隆人 \${index + 1} 受到 \${Math.floor(enemyAttack)} 伤害，剩余生命值: \${clones[index] > 0 ? clones[index] : 0}\\n\`;
                                 } else if (log) logText += \`克隆人 \${index + 1} 闪避了攻击\\n\`;
                             }
                         });
@@ -1185,9 +875,9 @@
                                 for (let i = 0; i < attackTimes; i++) {
                                     const hitChance = clonePrecision / (clonePrecision + enemyDodge);
                                     if (Math.random() < hitChance) {
-                                        let damage = cloneAttack;
+                                        let damage = Math.floor(cloneAttack);
                                         if (Math.random() < critChance) {
-                                            damage *= critDamage;
+                                            damage = Math.floor(damage * critDamage);
                                             if (log) logText += \`克隆人 \${index + 1} 第\${i + 1}次攻击暴击! \`;
                                         } else if (log) logText += \`克隆人 \${index + 1} 第\${i + 1}次攻击命中 \`;
                                         totalDamage += damage;
@@ -1195,7 +885,7 @@
                                 }
 
                                 if (log && attackTimes === 2) logText += \`克隆人 \${index + 1} 触发双重射击!\\n\`;
-                                currentEnemyHP -= totalDamage;
+                                currentEnemyHP = Math.max(0, Math.floor(currentEnemyHP - totalDamage));
                                 if (log) logText += \`克隆人 \${index + 1} 总共造成 \${totalDamage} 伤害，敌人剩余生命值: \${currentEnemyHP > 0 ? currentEnemyHP : 0}\\n\`;
                             }
                         });
@@ -1294,26 +984,40 @@
             const bestExpResult = results.reduce((max, curr) => 
                 curr.expectedExp > max.expectedExp ? curr : max, results[0]);
 
-            // 分别显示游戏币和经验的表格
-            let resultHTML = '<h2>批量模拟结果</h2>';
-            
-            // 游戏币收益表格（±4等级）
-            resultHTML += '<h3>游戏币收益（±4等级）</h3>';
-            resultHTML += '<table border="1"><tr><th>敌人等级</th><th>胜率</th><th>游戏币</th><th>预期游戏币收益</th></tr>';
+            let resultHTML = '<h2>批量模拟结果</h2>'; // Re-add the main heading
+            const isPC = window.innerWidth > 768; // Adjust this breakpoint as needed
+
+            // Separate HTML strings for coin and exp results
+            let coinHtml = '<h3>游戏币收益</h3>';
+            coinHtml += '<table border="1"><tr><th>敌人等级</th><th>胜率</th><th>游戏币</th><th>预期游戏币收益</th></tr>';
             results.filter(r => coinLevels.includes(r.level)).forEach(r => {
-                resultHTML += `<tr><td>${r.level}</td><td>${r.winRate.toFixed(2)}%</td><td>${r.coinReward}</td><td>${r.expectedCoins.toFixed(2)}</td></tr>`;
+                coinHtml += `<tr><td>${r.level}</td><td>${r.winRate.toFixed(2)}%</td><td>${Math.floor(r.coinReward)}</td><td>${Math.floor(r.expectedCoins)}</td></tr>`;
             });
-            resultHTML += '</table>';
-            resultHTML += `<p>最佳游戏币收益：等级 ${bestCoinResult.level}，预期收益 ${bestCoinResult.expectedCoins.toFixed(2)} 币，胜率 ${bestCoinResult.winRate.toFixed(2)}%</p>`;
+            coinHtml += '</table>';
+            coinHtml += `<p>最佳游戏币收益：等级 ${bestCoinResult.level}，预期收益 ${Math.floor(bestCoinResult.expectedCoins)} 币，胜率 ${bestCoinResult.winRate.toFixed(2)}%</p>`;
             
-            // 经验收益表格（基于四舍五入后的等级±30，步长10）
-            resultHTML += `<h3>经验收益（基于四舍五入到${roundedBaseLevel}级的±30范围，步长10）</h3>`;
-            resultHTML += '<table border="1"><tr><th>敌人等级</th><th>胜率</th><th>经验值</th><th>预期经验收益</th></tr>';
+            let expHtml = `<h3>经验收益</h3>`;
+            expHtml += '<table border="1"><tr><th>敌人等级</th><th>胜率</th><th>经验值</th><th>预期经验收益</th></tr>';
             results.filter(r => expLevels.includes(r.level)).forEach(r => {
-                resultHTML += `<tr><td>${r.level}</td><td>${r.winRate.toFixed(2)}%</td><td>${r.expReward}</td><td>${r.expectedExp.toFixed(2)}</td></tr>`;
+                expHtml += `<tr><td>${r.level}</td><td>${r.winRate.toFixed(2)}%</td><td>${r.expReward}</td><td>${r.expectedExp.toFixed(2)}</td></tr>`;
             });
-            resultHTML += '</table>';
-            resultHTML += `<p>最佳经验收益：等级 ${bestExpResult.level}，预期收益 ${bestExpResult.expectedExp.toFixed(2)} 经验，胜率 ${bestExpResult.winRate.toFixed(2)}%</p>`;
+            expHtml += '</table>';
+            expHtml += `<p>最佳经验收益：等级 ${bestExpResult.level}，预期收益 ${bestExpResult.expectedExp.toFixed(2)} 经验，胜率 ${bestExpResult.winRate.toFixed(2)}%</p>`;
+
+            if (isPC) {
+                resultHTML += '<div style="display: flex; flex-wrap: wrap; gap: 20px;">';
+                resultHTML += '<div style="flex: 1; min-width: 300px;">'; // Left column for Experience
+                resultHTML += coinHtml;
+                resultHTML += '</div>'; // Close left column
+
+                resultHTML += '<div style="flex: 1; min-width: 300px;">'; // Right column for Coin
+                resultHTML += expHtml;
+                resultHTML += '</div>'; // Close right column
+                resultHTML += '</div>'; // Close flex container
+            } else {
+                resultHTML += coinHtml; // Standard vertical stacking for mobile
+                resultHTML += expHtml;
+            }
             
             document.getElementById('result').innerHTML = resultHTML;
         }
@@ -1722,75 +1426,10 @@
             return { maxValue: nextValue, cost: cost };
         }
 
-        // 添加一个函数来显示一个属性的升级曲线
-        async function showUpgradeCurve() {
-            const attribute = document.getElementById('attributeSelect').value;
-            const currentValue = parseFloat(document.getElementById(attribute).value) || 0;
-            const cloneCount = parseInt(document.getElementById('cloneCount').value) || 1;
-            
-            let curveData = [];
-            
-            
-            // 对于暴击伤害，不需要减去基础值130%，因为输入框已经是纯增益值
-            let actualValue = currentValue;
-            
-            // 计算不同升级范围的成本
-            // 增加0.1%的成本
-            const cost01 = sumExponentialRange(actualValue, actualValue + 0.1) * cloneCount;
-            // 增加1.0%的成本
-            const cost10 = sumExponentialRange(actualValue, actualValue + 1.0) * cloneCount;
-            
-            
-            
-            
-            
-            
-            // 计算从当前值开始，每+1%的成本，以及累计成本
-            let totalCumulativeCost = 0;
-            for (let i = 0; i < 10; i++) {
-                const startValue = actualValue + i;
-                const endValue = startValue + 1.0;
-                const stepCost = sumExponentialRange(startValue, endValue) * cloneCount;
-                totalCumulativeCost += stepCost;
-                
-                // 显示的值不需要特殊处理
-                let displayFrom = startValue;
-                let displayTo = endValue;
-                
-                curveData.push({
-                    from: displayFrom.toFixed(1) + '%',
-                    to: displayTo.toFixed(1) + '%',
-                    cost: stepCost.toFixed(0),
-                    cumulative: totalCumulativeCost.toFixed(0)
-                });
-            }
-            
-            // 显示结果
-            let resultHTML = `<h3>${attribute === 'critChance' ? '暴击几率' : attribute === 'critDamage' ? '暴击伤害' : '双重射击'}升级成本曲线</h3>`;
-            
-            resultHTML += `<p>当前值: ${currentValue}%</p>`;
-            if (attribute === 'critDamage') {
-                resultHTML += `<p>实际战斗暴击伤害: ${(currentValue + 130).toFixed(1)}% (基础值130%+增益${currentValue}%)</p>`;
-            }
-            resultHTML += `<p>增加0.1%成本: ${cost01.toFixed(0)}</p>`;
-            resultHTML += `<p>增加1.0%成本: ${cost10.toFixed(0)}</p>`;
-            
-            resultHTML += '<table border="1"><tr><th>从</th><th>到</th><th>成本 (货币)</th><th>累计成本</th></tr>';
-            
-            curveData.forEach(data => {
-                resultHTML += `<tr><td>${data.from}</td><td>${data.to}</td><td>${data.cost}</td><td>${data.cumulative}</td></tr>`;
-            });
-            
-            resultHTML += '</table>';
-            resultHTML += '<p>注意：成本已乘以当前克隆人数量 ' + cloneCount + '</p>';
-            resultHTML += verificationHTML;
-            
-            document.getElementById('result').innerHTML = resultHTML;
-        }
-
         async function compareUpgrades() {
             const cloneCount = parseInt(document.getElementById('cloneCount').value) || 1;
-            const clonePrice = parseFloat(document.getElementById('clonePrice').value) || 100000000;
+            const clonePriceInput = document.getElementById('clonePrice').value;
+            const clonePrice = parseCurrencyInput(clonePriceInput) || 100000000; // Parse the input
             const simCount = 360000
             
             
@@ -1810,14 +1449,8 @@
             
             // 计算各项单次升级(+1%)的值和成本
             const critChanceUpgrade = getSingleUpgrade(currentCritChance, cloneCount);
-            // 暴击伤害的成本计算（不需要减去基础值130%，因为输入框已经是纯增益值）
-            const critDamageActual = currentCritDamage; // 不再减去基础值，因为输入框值就是增益部分
-            const critDamageNextValue = Number((critDamageActual + 1.0).toFixed(1));
-            const critDamageCost = sumExponentialRange(critDamageActual, critDamageNextValue) * cloneCount;
-            const critDamageUpgrade = { 
-                maxValue: critDamageNextValue, // 不再加回基础值，因为输入框值就是增益部分
-                cost: critDamageCost 
-            };
+            // 暴击伤害的成本计算
+            const critDamageUpgrade = getSingleUpgrade(currentCritDamage, cloneCount);
             const reAttackChanceUpgrade = getSingleUpgrade(currentReAttackChance, cloneCount);
             
             
@@ -1933,18 +1566,18 @@
             let resultHTML = '<h2>升级收益比较结果</h2>';
             resultHTML += '<table border="1"><tr><th>升级选项</th><th>当前值</th><th>升级后</th><th>成本 (货币)</th><th>胜率变化</th><th>投资回报率 (百万)</th></tr>';
             
-            resultHTML += `<tr><td>暴击几率</td><td>${currentCritChance.toFixed(1)}%</td><td>${critChanceUpgrade.maxValue.toFixed(1)}%</td><td>${critChanceUpgrade.cost.toFixed(0)}</td>
+            resultHTML += `<tr><td>暴击几率</td><td>${currentCritChance.toFixed(1)}%</td><td>${critChanceUpgrade.maxValue.toFixed(1)}%</td><td>${formatCurrencyOutput(critChanceUpgrade.cost)}</td>
                            <td>${(critChanceResult.newWinRate - critChanceResult.currentWinRate).toFixed(2)}%</td><td>${critChanceROI.toFixed(4)}</td></tr>`;
             
-            resultHTML += `<tr><td>暴击伤害</td><td>${currentCritDamage.toFixed(1)}%</td><td>${critDamageUpgrade.maxValue.toFixed(1)}%</td><td>${critDamageUpgrade.cost.toFixed(0)}</td>
+            resultHTML += `<tr><td>暴击伤害</td><td>${currentCritDamage.toFixed(1)}%</td><td>${critDamageUpgrade.maxValue.toFixed(1)}%</td><td>${formatCurrencyOutput(critDamageUpgrade.cost)}</td>
                            <td>${(critDamageResult.newWinRate - critDamageResult.currentWinRate).toFixed(2)}%</td><td>${critDamageROI.toFixed(4)}</td></tr>`;
-            resultHTML += `<tr><td>双重射击</td><td>${currentReAttackChance.toFixed(1)}%</td><td>${reAttackChanceUpgrade.maxValue.toFixed(1)}%</td><td>${reAttackChanceUpgrade.cost.toFixed(0)}</td>
+            resultHTML += `<tr><td>双重射击</td><td>${currentReAttackChance.toFixed(1)}%</td><td>${reAttackChanceUpgrade.maxValue.toFixed(1)}%</td><td>${formatCurrencyOutput(reAttackChanceUpgrade.cost)}</td>
                            <td>${(reAttackChanceResult.newWinRate - reAttackChanceResult.currentWinRate).toFixed(2)}%</td><td>${reAttackChanceROI.toFixed(4)}</td></tr>`;
-            resultHTML += `<tr><td>新增克隆人</td><td>${cloneCount}</td><td>${newCloneCount}</td><td>${cloneCost.toFixed(0)}</td>
+            resultHTML += `<tr><td>新增克隆人</td><td>${cloneCount}</td><td>${newCloneCount}</td><td>${formatCurrencyOutput(cloneCost)}</td>
                            <td>${(newCloneWinRate - baseWinRate).toFixed(2)}%</td><td>${newCloneROI.toFixed(4)}</td></tr>`;
             
             resultHTML += '</table>';
-            resultHTML += '<p>注意：成本已乘以当前克隆人数量 ' + cloneCount + '</p>';
+            resultHTML += '<p>注意：所有成本计算已考虑克隆人数量 ' + cloneCount + '。</p>';
             resultHTML += `<h3>最佳投资选项</h3><p>根据当前分析，<strong>${options[0].name}</strong>的投资回报率最高，建议优先升级此项。</p>`;
             
             document.getElementById('result').innerHTML = resultHTML;
@@ -1999,8 +1632,9 @@
                         critChance, critDamage, reAttackChance
                     } = params;
                     
-                    // 确保critDamage包含基础值130%
-                    critDamage = critDamage || 1.3; // 如果未定义，使用默认值1.3 (130%)
+                    // 确保critDamage包含基础值130%，并向下取整
+                    critDamage = Math.floor(critDamage) || 1.3; // 如果未定义，使用默认值1.3 (130%)
+                    cloneHP = Math.floor(cloneHP); // 克隆人生命值向下取整
 
                     let currentEnemyHP = enemyHP;
                     let clones = Array(cloneCount).fill(cloneHP);
@@ -2013,9 +1647,11 @@
                             if (hp > 0) {
                                 const hitChance = enemyPrecision / (enemyPrecision + cloneDodge);
                                 if (Math.random() < hitChance) {
-                                    clones[index] -= enemyAttack;
-                                    if (log) logText += `克隆人 ${index + 1} 受到 ${enemyAttack} 伤害，剩余生命值: ${clones[index] > 0 ? clones[index] : 0}\n`;
-                                } else if (log) logText += `克隆人 ${index + 1} 闪避了攻击\n`;
+                                    clones[index] = Math.max(0, Math.floor(clones[index] - Math.floor(enemyAttack)));
+                                    if (log) logText += `克隆人${index + 1} 受到 ${Math.floor(enemyAttack)} 伤害，剩余生命值: ${clones[index]}\n`;
+                                } else if (log) {
+                                    logText += `克隆人${index + 1} 闪避了攻击\n`;
+                                }
                             }
                         });
 
@@ -2024,22 +1660,27 @@
                             if (hp > 0) {
                                 let totalDamage = 0;
                                 const attackTimes = Math.random() < reAttackChance ? 2 : 1; // 每回合只判定一次双重射击
-
+                                let attackLog = [];
                                 for (let i = 0; i < attackTimes; i++) {
                                     const hitChance = clonePrecision / (clonePrecision + enemyDodge);
                                     if (Math.random() < hitChance) {
-                                        let damage = cloneAttack;
+                                        let damage = Math.floor(cloneAttack);
                                         if (Math.random() < critChance) {
-                                            damage *= critDamage;
-                                            if (log) logText += `克隆人 ${index + 1} 第${i + 1}次攻击暴击! `;
-                                        } else if (log) logText += `克隆人 ${index + 1} 第${i + 1}次攻击命中 `;
+                                            damage = Math.floor(damage * critDamage);
+                                            attackLog.push(`第${i + 1}次攻击暴击!`);
+                                        } else {
+                                            attackLog.push(`第${i + 1}次攻击命中`);
+                                        }
                                         totalDamage += damage;
-                                    } else if (log) logText += `克隆人 ${index + 1} 第${i + 1}次攻击未命中 `;
+                                    } else {
+                                        attackLog.push(`第${i + 1}次攻击未命中`);
+                                    }
                                 }
-
-                                if (log && attackTimes === 2) logText += `克隆人 ${index + 1} 触发双重射击!\n`;
-                                currentEnemyHP -= totalDamage;
-                                if (log) logText += `克隆人 ${index + 1} 总共造成 ${totalDamage} 伤害，敌人剩余生命值: ${currentEnemyHP > 0 ? currentEnemyHP : 0}\n`;
+                                if (log) {
+                                    logText += `克隆人${index + 1} ` + attackLog.join(' ') + (attackTimes === 2 ? ' 触发双重射击!' : '') + '\n';
+                                }
+                                currentEnemyHP = Math.max(0, Math.floor(currentEnemyHP - totalDamage));
+                                if (log) logText += `克隆人${index + 1} 总共造成 ${Math.floor(totalDamage)} 伤害，敌人剩余生命值: ${currentEnemyHP}\n`;
                             }
                         });
 
@@ -2132,7 +1773,7 @@
                 }
                 const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
                 const baseCloneAttack = parseFloat(document.getElementById('baseCloneAttack').value);
-                const isVip = document.getElementById('vipStatus').checked;
+                
                 const cloneCount = parseInt(document.getElementById('cloneCount').value);
                 const enemyHP = parseFloat(document.getElementById('enemyHP').textContent);
                 const enemyAttack = parseFloat(document.getElementById('enemyAttack').textContent);
