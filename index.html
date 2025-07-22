@@ -76,7 +76,7 @@ tr:hover { background: rgba(0,0,0,0.05); }
             <h2>敌人参数</h2>
     <div class="form-group"><label>敌人等级:</label><input type="number" id="enemyLevel" value="1" min="1" oninput="updateEnemyStats()"></div>
     <div class="form-group"><label>改装伤害加成:</label><input type="number" id="damageMultiplier" value="1" step="0.15" oninput="updateEnemyStats()"></div>
-    <div class="form-group"><label>战斗提升等级:</label><input type="number" id="battleBoostLevel" value="0" min="0" oninput="updateCloneStats()"></div>
+    <div class="form-group"><label>战斗提升等级:</label><input type="number" id="battleBoostLevel" value="0" min="0" oninput="updateCloneStats()"> <span id="battleBoostPercentage" class="stat-info"></span></div>
     <div class="form-group"><label>生命值:</label><span id="enemyHP" class="stat-value">42500</span></div>
     <div class="form-group"><label>攻击力:</label><span id="enemyAttack" class="stat-value">595</span></div>
     <div class="form-group"><label>精准:</label><span id="enemyPrecision" class="stat-value">170</span></div>
@@ -151,6 +151,21 @@ tr:hover { background: rgba(0,0,0,0.05); }
             } else {
                 return num.toFixed(0);
             }
+        }
+
+        // 根据战斗提升等级计算倍率的辅助函数
+        function calculateBoostMultiplier(battleBoostLevel) {
+            let boostMultiplier = 1;
+            if (battleBoostLevel > 0) {
+                if (battleBoostLevel <= 10) {
+                    boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                } else if (battleBoostLevel <= 20) {
+                    boostMultiplier = 1 + (10 * 0.05) + ((battleBoostLevel - 10) * 0.03);
+                } else {
+                    boostMultiplier = 1 + (10 * 0.05) + (10 * 0.03) + ((battleBoostLevel - 20) * 0.02);
+                }
+            }
+            return boostMultiplier;
         }
 
         // 在script开始部分添加全局变量
@@ -446,14 +461,19 @@ tr:hover { background: rgba(0,0,0,0.05); }
                 message += `敌人等级：${player.levels.battling_level}（使用玩家战斗等级作为后备）\n`;
             }
             
-            // 设置战斗提升等级 - 从 spacestation.battling_boost 获取
-            if (player.spacestation && player.spacestation.battling_boost !== undefined) {
+            // 设置战斗提升等级 - 从 spacestation.battling_boost 获取，现在从 Barracks 建筑等级获取
+            const barracksBuilding = player.squadron && player.squadron.buildings &&
+                                   player.squadron.buildings.find(b => b.name === 'Barracks');
+            if (barracksBuilding && barracksBuilding.level !== undefined) {
+                document.getElementById('battleBoostLevel').value = barracksBuilding.level;
+                message += `战斗提升等级（兵营等级）：${barracksBuilding.level}\n`;
+            } else if (player.spacestation && player.spacestation.battling_boost !== undefined) {
                 document.getElementById('battleBoostLevel').value = player.spacestation.battling_boost;
-                message += `战斗提升等级：${player.spacestation.battling_boost}\n`;
+                message += `战斗提升等级（空间站提升）：${player.spacestation.battling_boost}\n`;
             } else {
                 // 如果没有空间站战斗提升等级信息，则重置为0
                 document.getElementById('battleBoostLevel').value = 0;
-                message += `战斗提升等级：0 (未从API获取到)\n`;
+                message += `战斗提升等级：0 (未从API或兵营获取到)\n`;
             }
 
             // 如果没有找到改装相关信息，则将改装伤害加成设为1
@@ -562,7 +582,7 @@ tr:hover { background: rgba(0,0,0,0.05); }
             warning.style.display = 'none'; // 移除警告，总点数自适应
 
             // 计算战斗提升倍率
-            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
 
             // 计算克隆人参数
             const baseCloneHPVal = parseFloat(document.getElementById('baseCloneHP').value);
@@ -570,21 +590,23 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
             // 此变量未被使用
 
+            const { calculatedCloneHP, calculatedCloneAttack } = calculateCloneDerivedStats(
+                baseCloneHPVal, baseCloneAttackVal, B, A, cloneCount, boostMultiplier, damageMultiplier
+            );
+            const totalCloneHPForDisplay = calculatedCloneHP * cloneCount; // 修正：这里应为单个克隆人HP * 克隆人数量
+
             const rawSingleCloneHP = baseCloneHPVal + 7 * B;
             const singleCloneHPAfterBoost = rawSingleCloneHP * boostMultiplier;
-            const totalCloneHPForDisplay = singleCloneHPAfterBoost * cloneCount; 
-
+            
             const rawSingleCloneAttack = baseCloneAttackVal + 7 * A;
             const singleCloneAttackAfterBoost = rawSingleCloneAttack * boostMultiplier; 
 
-            const totalCloneAttackForSimulation = singleCloneAttackAfterBoost * cloneCount * damageMultiplier; 
+            const totalCloneAttackForSimulation = calculatedCloneAttack; // 直接使用计算后的总攻击力
             const calculatedClonePrecision = C * boostMultiplier;
             const calculatedCloneDodge = D * boostMultiplier;
 
-          
+            document.getElementById('battleBoostPercentage').textContent = `(${(boostMultiplier * 100 - 100).toFixed(1)}%)`;
 
-           
-            
             document.getElementById('cloneHP').textContent = Math.floor(totalCloneHPForDisplay); 
             document.getElementById('rawSingleCloneHP').textContent = Math.floor(rawSingleCloneHP); 
 
@@ -666,36 +688,34 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const level = parseInt(document.getElementById('enemyLevel').value) || 1;
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.3;
             
-            // 计算敌人攻击力
-            let enemyAttack;
+            const enemyStats = calculateEnemyStats(level);
+
+            document.getElementById('enemyHP').textContent = enemyStats.enemyHP;
+            document.getElementById('enemyAttack').textContent = enemyStats.enemyAttack;
+            document.getElementById('enemyPrecision').textContent = enemyStats.enemyPrecision;
+            document.getElementById('enemyDodge').textContent = enemyStats.enemyDodge;
+        }
+
+        // 根据敌人等级计算敌人属性的辅助函数
+        function calculateEnemyStats(level) {
+            let enemyHP, enemyAttack, enemyPrecision, enemyDodge;
+            
             if (level < 100) {
                 enemyAttack = Math.floor(7.0 * level);
-            } else {
-                enemyAttack = Math.floor(7.0 * 1.1 * level);
-            }
-            
-            // 计算敌人精准和闪避
-            let enemyPrecision, enemyDodge;
-            if (level < 100) {
                 enemyPrecision = Math.floor(1.0 * level);
                 enemyDodge = Math.floor(1.0 * level);
             } else {
+                enemyAttack = Math.floor(7.0 * 1.1 * level);
                 enemyPrecision = Math.floor(1.0 * 1.5 * level);
                 enemyDodge = Math.floor(1.0 * 1.5 * level);
             }
             
-            // 计算敌人生命值
-            let enemyHP;
             if (level < 150) {
                 enemyHP = Math.floor(1300.0 * level);
             } else {
                 enemyHP = Math.floor(1300.0 * 1.2 * level);
             }
-
-            document.getElementById('enemyHP').textContent = enemyHP;
-            document.getElementById('enemyAttack').textContent = enemyAttack;
-            document.getElementById('enemyPrecision').textContent = enemyPrecision;
-            document.getElementById('enemyDodge').textContent = enemyDodge;
+            return { enemyHP, enemyAttack, enemyPrecision, enemyDodge };
         }
 
         // 修改getParamsForLevel函数，移除重复的伤害加成计算
@@ -704,34 +724,11 @@ tr:hover { background: rgba(0,0,0,0.05); }
             
             // 获取战斗提升等级，并计算倍率
             const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
 
             // 计算敌人生命值
-            let enemyHP;
-            if (level < 150) {
-                enemyHP = Math.floor(1300.0 * level);
-            } else {
-                enemyHP = Math.floor(1300.0 * 1.2 * level);
-            }
-            
-            // 计算敌人攻击力
-            let enemyAttack;
-            if (level < 100) {
-                enemyAttack = Math.floor(7.0 * level);
-            } else {
-                enemyAttack = Math.floor(7.0 * 1.1 * level);
-            }
-            
-            // 计算敌人精准和闪避
-            let enemyPrecision, enemyDodge;
-            if (level < 100) {
-                enemyPrecision = Math.floor(1.0 * level);
-                enemyDodge = Math.floor(1.0 * level);
-            } else {
-                enemyPrecision = Math.floor(1.0 * 1.5 * level);
-                enemyDodge = Math.floor(1.0 * 1.5 * level);
-            }
-            
+            const enemyStats = calculateEnemyStats(level);
+
             // 读取克隆人UI元素，避免重复获取
             const critChance = parseFloat(document.getElementById('critChance').value) / 100;
             const critDamage = (parseFloat(document.getElementById('critDamage').value) + 130) / 100;
@@ -739,14 +736,21 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const cloneCount = parseInt(document.getElementById('cloneCount').value);
             
             // 修复：确保这里计算的是单个克隆人的HP，以及所有克隆人的总攻击力
-            const calculatedCloneHP = (parseFloat(document.getElementById('baseCloneHP').value) + 7 * (parseInt(document.getElementById('addArmor').value) || 0)) * boostMultiplier;
-            const calculatedCloneAttack = ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * (parseInt(document.getElementById('addAttack').value) || 0)) * cloneCount) * boostMultiplier * damageMultiplier;
+            const { calculatedCloneHP, calculatedCloneAttack } = calculateCloneDerivedStats(
+                parseFloat(document.getElementById('baseCloneHP').value),
+                parseFloat(document.getElementById('baseCloneAttack').value),
+                (parseInt(document.getElementById('addArmor').value) || 0),
+                (parseInt(document.getElementById('addAttack').value) || 0),
+                cloneCount,
+                boostMultiplier,
+                damageMultiplier
+            );
 
             return {
-                enemyHP: enemyHP,
-                enemyAttack: enemyAttack,
-                enemyPrecision: enemyPrecision,
-                enemyDodge: enemyDodge,
+                enemyHP: enemyStats.enemyHP,
+                enemyAttack: enemyStats.enemyAttack,
+                enemyPrecision: enemyStats.enemyPrecision,
+                enemyDodge: enemyStats.enemyDodge,
                 cloneCount: cloneCount,
                 cloneHP: calculatedCloneHP,
                 cloneAttack: calculatedCloneAttack,
@@ -756,6 +760,13 @@ tr:hover { background: rgba(0,0,0,0.05); }
                 critDamage: critDamage,
                 reAttackChance: reAttackChance
             };
+        }
+
+        // 根据克隆人属性和加点计算派生统计数据的辅助函数
+        function calculateCloneDerivedStats(baseCloneHPVal, baseCloneAttackVal, addArmor, addAttack, cloneCount, boostMultiplier, damageMultiplier) {
+            const calculatedCloneHP = (baseCloneHPVal + 7 * addArmor) * boostMultiplier;
+            const calculatedCloneAttack = ((baseCloneAttackVal + 7 * addAttack) * cloneCount) * boostMultiplier * damageMultiplier;
+            return { calculatedCloneHP, calculatedCloneAttack };
         }
 
         const workerScript = `
@@ -1070,7 +1081,7 @@ tr:hover { background: rgba(0,0,0,0.05); }
 
             // 获取战斗提升等级，并计算倍率
             const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
 
             const params = {
@@ -1079,8 +1090,24 @@ tr:hover { background: rgba(0,0,0,0.05); }
                 enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                 enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                 cloneCount: parseInt(document.getElementById('cloneCount').value),
-                cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * build.B) * boostMultiplier,
-                cloneAttack: ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * build.A) * parseInt(document.getElementById('cloneCount').value)) * boostMultiplier * damageMultiplier,
+                cloneHP: calculateCloneDerivedStats(
+                    parseFloat(document.getElementById('baseCloneHP').value),
+                    parseFloat(document.getElementById('baseCloneAttack').value),
+                    build.B, // addArmor
+                    build.A, // addAttack
+                    parseInt(document.getElementById('cloneCount').value),
+                    boostMultiplier,
+                    damageMultiplier
+                ).calculatedCloneHP,
+                cloneAttack: calculateCloneDerivedStats(
+                    parseFloat(document.getElementById('baseCloneHP').value),
+                    parseFloat(document.getElementById('baseCloneAttack').value),
+                    build.B, // addArmor
+                    build.A, // addAttack
+                    parseInt(document.getElementById('cloneCount').value),
+                    boostMultiplier,
+                    damageMultiplier
+                ).calculatedCloneAttack,
                 clonePrecision: build.C * boostMultiplier,
                 cloneDodge: build.D * boostMultiplier,
                 critChance: parseFloat(document.getElementById('critChance').value) / 100,
@@ -1108,7 +1135,7 @@ tr:hover { background: rgba(0,0,0,0.05); }
 
             // 获取战斗提升等级，并计算倍率
             const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            const boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
 
             // 计算克隆人属性，不修改DOM
             const baseCloneHP = parseFloat(document.getElementById('baseCloneHP').value);
@@ -1116,8 +1143,8 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const cloneCount = parseInt(document.getElementById('cloneCount').value);
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
 
-            const cloneHP = (baseCloneHP + 7 * build.B) * boostMultiplier;
-            const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier * damageMultiplier;
+            const cloneHP = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, build.B, build.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneHP;
+            const cloneAttack = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, build.B, build.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneAttack;
 
             
            
@@ -1221,7 +1248,7 @@ tr:hover { background: rgba(0,0,0,0.05); }
 
                     // 获取战斗提升等级，并计算倍率
                     const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-                    const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                    let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
                     const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
 
                     const params = {
@@ -1230,8 +1257,24 @@ tr:hover { background: rgba(0,0,0,0.05); }
                         enemyPrecision: parseFloat(document.getElementById('enemyPrecision').textContent),
                         enemyDodge: parseFloat(document.getElementById('enemyDodge').textContent),
                         cloneCount: parseInt(document.getElementById('cloneCount').value),
-                        cloneHP: (parseFloat(document.getElementById('baseCloneHP').value) + 7 * newBuild.B) * boostMultiplier,
-                        cloneAttack: ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * newBuild.A) * parseInt(document.getElementById('cloneCount').value)) * boostMultiplier * damageMultiplier,
+                        cloneHP: calculateCloneDerivedStats(
+                            parseFloat(document.getElementById('baseCloneHP').value),
+                            parseFloat(document.getElementById('baseCloneAttack').value),
+                            newBuild.B, // addArmor
+                            newBuild.A, // addAttack
+                            parseInt(document.getElementById('cloneCount').value),
+                            boostMultiplier,
+                            damageMultiplier
+                        ).calculatedCloneHP,
+                        cloneAttack: calculateCloneDerivedStats(
+                            parseFloat(document.getElementById('baseCloneHP').value),
+                            parseFloat(document.getElementById('baseCloneAttack').value),
+                            newBuild.B, // addArmor
+                            newBuild.A, // addAttack
+                            parseInt(document.getElementById('cloneCount').value),
+                            boostMultiplier,
+                            damageMultiplier
+                        ).calculatedCloneAttack,
                         clonePrecision: newBuild.C * boostMultiplier,
                         cloneDodge: newBuild.D * boostMultiplier,
                         critChance: parseFloat(document.getElementById('critChance').value) / 100,
@@ -1366,11 +1409,20 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const newCloneParams = { ...baseParams, cloneCount: newCloneCount };
             // 需要重新计算 cloneHP 和 cloneAttack，因为 cloneCount 改变了
             const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-            const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+            let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
             const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0;
 
-            newCloneParams.cloneHP = (parseFloat(document.getElementById('baseCloneHP').value) + 7 * (parseInt(document.getElementById('addArmor').value) || 0)) * boostMultiplier;
-            newCloneParams.cloneAttack = ((parseFloat(document.getElementById('baseCloneAttack').value) + 7 * (parseInt(document.getElementById('addAttack').value) || 0)) * newCloneCount) * boostMultiplier * damageMultiplier;
+            const { calculatedCloneHP: newCloneCalculatedHP, calculatedCloneAttack: newCloneCalculatedAttack } = calculateCloneDerivedStats(
+                parseFloat(document.getElementById('baseCloneHP').value),
+                parseFloat(document.getElementById('baseCloneAttack').value),
+                (parseInt(document.getElementById('addArmor').value) || 0),
+                (parseInt(document.getElementById('addAttack').value) || 0),
+                newCloneCount, // 使用新的克隆人数量
+                boostMultiplier,
+                damageMultiplier
+            );
+            newCloneParams.cloneHP = newCloneCalculatedHP;
+            newCloneParams.cloneAttack = newCloneCalculatedAttack;
 
             const newCloneWinRate = await pool.exec(sim, [{ params: newCloneParams, simCount: simCount, build: {} }]).then(res => res.winRate);
             
@@ -1462,6 +1514,10 @@ tr:hover { background: rgba(0,0,0,0.05); }
             const log = e.log || false;
             let winCount = 0;
             let logText = '';
+
+            // 获取战斗提升等级，并计算倍率
+            const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
+            let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
 
             // 用批量模拟（workerScript）里的 simulateSingleBattle 逻辑覆盖
             function simulateSingleBattle(params, log) {
@@ -1626,11 +1682,11 @@ tr:hover { background: rgba(0,0,0,0.05); }
                     
                     // 获取战斗提升等级，并计算倍率
                     const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-                    const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                    let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
                     const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0; // Retrieve damageMultiplier here
 
-                    const cloneHP = (baseCloneHP + 7 * build.B) * boostMultiplier;
-                    const cloneAttack = ((baseCloneAttack + 7 * build.A) * cloneCount) * boostMultiplier * damageMultiplier;
+                    const cloneHP = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, build.B, build.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneHP;
+                    const cloneAttack = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, build.B, build.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneAttack;
                     const params = {
                         enemyHP: enemyHP,
                         enemyAttack: enemyAttack,
@@ -1774,11 +1830,11 @@ tr:hover { background: rgba(0,0,0,0.05); }
 
                 // 获取战斗提升等级，并计算倍率
                 const battleBoostLevel = parseInt(document.getElementById('battleBoostLevel').value) || 0;
-                const boostMultiplier = 1 + (battleBoostLevel * 0.05);
+                let boostMultiplier = calculateBoostMultiplier(battleBoostLevel);
                 const damageMultiplier = parseFloat(document.getElementById('damageMultiplier').value) || 1.0; // Retrieve damageMultiplier here
 
-                const cloneHP = (baseCloneHP + 7 * newBuild.B) * boostMultiplier;
-                const cloneAttack = ((baseCloneAttack + 7 * newBuild.A) * cloneCount) * boostMultiplier * damageMultiplier;
+                const cloneHP = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, newBuild.B, newBuild.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneHP;
+                const cloneAttack = calculateCloneDerivedStats(baseCloneHP, baseCloneAttack, newBuild.B, newBuild.A, cloneCount, boostMultiplier, damageMultiplier).calculatedCloneAttack;
                 
                 const params = {
                     enemyHP: enemyHP,
